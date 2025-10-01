@@ -120,7 +120,7 @@ export class AnalyticsProcessor extends WorkerHost {
           include: {
             oddsSnapshots: {
               where: {
-                outcome: { not: '' as any },
+                outcome: { not: '' },
               },
               orderBy: { timestamp: 'desc' },
               take: 1,
@@ -200,7 +200,10 @@ export class AnalyticsProcessor extends WorkerHost {
     const pushes = bets.filter((bet) => bet.result === 'PUSH').length;
 
     // Segment by sport
-    const bySport: Record<string, { total: number; wins: number; losses: number; winRate?: number }> = {};
+    const bySport: Record<
+      string,
+      { total: number; wins: number; losses: number; winRate?: number }
+    > = {};
     for (const bet of bets) {
       const sport = bet.event.sportType;
       if (!bySport[sport]) {

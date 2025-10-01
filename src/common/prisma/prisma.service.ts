@@ -13,7 +13,7 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
         { emit: 'event', level: 'info' },
         { emit: 'event', level: 'warn' },
       ],
-    } as any);
+    } as Prisma.PrismaClientOptions);
   }
 
   async onModuleInit() {
@@ -25,7 +25,7 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
 
     // Log queries in development
     if (process.env.NODE_ENV !== 'production') {
-      (this.$on as any)('query', (e: Prisma.QueryEvent) => {
+      this.$on('query', (e: Prisma.QueryEvent) => {
         this.logger.debug(`Query: ${e.query}`);
         this.logger.debug(`Duration: ${e.duration}ms`);
       });

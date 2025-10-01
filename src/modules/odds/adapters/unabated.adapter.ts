@@ -164,19 +164,25 @@ export class UnabatedAdapter extends BaseOddsAdapter {
         );
 
         const markets: MarketOdds[] = [];
-        const eventMarkets = event.markets as Record<string, any>;
+        const eventMarkets = event.markets as Record<string, unknown>;
 
         // Process moneyline
         if (eventMarkets?.moneyline) {
           markets.push({
             marketType: 'MONEYLINE',
-            outcomes: this.extractOutcomes(eventMarkets.moneyline as Record<string, unknown>, ['home', 'away']),
+            outcomes: this.extractOutcomes(eventMarkets.moneyline as Record<string, unknown>, [
+              'home',
+              'away',
+            ]),
           });
         }
 
         // Process spreads
         if (eventMarkets?.spreads && Array.isArray(eventMarkets.spreads)) {
-          for (const spread of eventMarkets.spreads as Array<{ line: unknown; odds: Record<string, unknown> }>) {
+          for (const spread of eventMarkets.spreads as Array<{
+            line: unknown;
+            odds: Record<string, unknown>;
+          }>) {
             markets.push({
               marketType: 'SPREAD',
               parameters: { line: spread.line },
@@ -187,7 +193,10 @@ export class UnabatedAdapter extends BaseOddsAdapter {
 
         // Process totals
         if (eventMarkets?.totals && Array.isArray(eventMarkets.totals)) {
-          for (const total of eventMarkets.totals as Array<{ line: unknown; odds: Record<string, unknown> }>) {
+          for (const total of eventMarkets.totals as Array<{
+            line: unknown;
+            odds: Record<string, unknown>;
+          }>) {
             markets.push({
               marketType: 'TOTAL_OVER',
               parameters: { line: total.line },

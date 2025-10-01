@@ -3,7 +3,7 @@ import { PrismaService } from '../../common/database/prisma.service';
 import { OddsUtils } from '../../common/utils/odds.utils';
 import { PlanBetDto } from './dto/plan-bet.dto';
 import { ConfirmBetDto } from './dto/confirm-bet.dto';
-import { Prisma } from '@prisma/client';
+import { Prisma, BetStatus } from '@prisma/client';
 
 type BetWithRelations = Prisma.BetGetPayload<{
   include: {
@@ -147,11 +147,11 @@ export class BetsService {
   /**
    * Get user's bet history
    */
-  async getUserBets(userId: string, status?: string) {
+  async getUserBets(userId: string, status?: BetStatus) {
     const where: Prisma.BetWhereInput = { userId };
 
     if (status) {
-      where.status = status as any;
+      where.status = status;
     }
 
     return this.prisma.bet.findMany({

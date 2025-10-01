@@ -9,7 +9,10 @@ import { PrismaClient, Prisma } from '@prisma/client';
 import { ConfigService } from '@nestjs/config';
 
 @Injectable()
-export class PrismaService extends PrismaClient<Prisma.PrismaClientOptions, 'query' | 'error' | 'info' | 'warn'> implements OnModuleInit, OnModuleDestroy {
+export class PrismaService
+  extends PrismaClient<Prisma.PrismaClientOptions, 'query' | 'error' | 'info' | 'warn'>
+  implements OnModuleInit, OnModuleDestroy
+{
   private readonly logger = new Logger(PrismaService.name);
 
   constructor(private configService: ConfigService) {
@@ -25,18 +28,18 @@ export class PrismaService extends PrismaClient<Prisma.PrismaClientOptions, 'que
         { emit: 'event', level: 'info' },
         { emit: 'event', level: 'warn' },
       ],
-    } as any);
+    } as Prisma.PrismaClientOptions);
 
     // Log slow queries in production
     if (process.env.NODE_ENV === 'production') {
-      (this.$on as any)('query', (e: Prisma.QueryEvent) => {
+      this.$on('query', (e: Prisma.QueryEvent) => {
         if (e.duration > 1000) {
           this.logger.warn(`Slow query detected: ${e.query} (${e.duration}ms)`);
         }
       });
     }
 
-    (this.$on as any)('error', (e: Prisma.LogEvent) => {
+    this.$on('error', (e: Prisma.LogEvent) => {
       this.logger.error(`Database error: ${e.message}`);
     });
   }

@@ -3,7 +3,6 @@ import { Logger } from '@nestjs/common';
 import { Job } from 'bullmq';
 import { OddsService } from '../../modules/odds/odds.service';
 import { PrismaService } from '../../common/database/prisma.service';
-import { Prisma } from '@prisma/client';
 
 export interface OddsIngestionJobData {
   sport: string;
@@ -44,7 +43,7 @@ export class OddsIngestionProcessor extends WorkerHost {
           queueName: 'odds-ingestion',
           jobType: eventId ? 'event-refresh' : 'sport-refresh',
           status: 'ACTIVE',
-          inputData: job.data as any,
+          inputData: job.data as Record<string, unknown>,
           startedAt: new Date(),
         },
       });
@@ -72,7 +71,7 @@ export class OddsIngestionProcessor extends WorkerHost {
         where: { jobId: job.id },
         data: {
           status: 'COMPLETED',
-          outputData: logResult as any,
+          outputData: logResult as Record<string, unknown>,
           completedAt: new Date(),
         },
       });
