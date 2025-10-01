@@ -1,0 +1,57 @@
+import { Test, TestingModule } from '@nestjs/testing';
+import { INestApplication, ValidationPipe } from '@nestjs/common';
+import * as request from 'supertest';
+import { AppModule } from './../src/app.module';
+
+describe('AppController (e2e)', () => {
+  let app: INestApplication;
+
+  beforeEach(async () => {
+    const moduleFixture: TestingModule = await Test.createTestingModule({
+      imports: [AppModule],
+    }).compile();
+
+    app = moduleFixture.createNestApplication();
+    
+    app.useGlobalPipes(
+      new ValidationPipe({
+        whitelist: true,
+        forbidNonWhitelisted: true,
+        transform: true,
+      }),
+    );
+
+    await app.init();
+  });
+
+  afterAll(async () => {
+    await app.close();
+  });
+
+  describe('Health Checks', () => {
+    it('/health (GET) should return healthy status', () => {
+      return request(app.getHttpServer())
+        .get('/health')
+        .expect(200)
+        .expect((res) => {
+          expect(res.body).toHaveProperty('status');
+          expect(res.body.status).toBe('ok');
+        });
+    });
+
+    it('/health/ready (GET) should return ready status', () => {
+      return request(app.getHttpServer())
+        .get('/health/ready')
+        .expect(200);
+    });
+  });
+
+  describe('API Documentation', () => {
+    it('/api/docs should serve Swagger UI', () => {
+      return request(app.getHttpServer())
+        .get('/api/docs')
+        .expect(301); // Redirect to /api/docs/
+    });
+  });
+});
+

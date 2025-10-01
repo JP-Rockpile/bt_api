@@ -1,0 +1,497 @@
+// Bet Think Core Database Schema
+// Requires PostgreSQL 12+ with pgvector extension
+
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["postgresqlExtensions"]
+}
+
+datasource db {
+  provider   = "postgresql"
+  url        = env("DATABASE_URL")
+  extensions = [pgvector(map: "vector")]
+}
+
+// ============================================================================
+// USER MANAGEMENT
+// ============================================================================
+
+model User {
+  id        String   @id @default(cuid())
+  auth0Sub  String   @unique @map("auth0_sub") // Auth0 subject identifier
+  email     String?  @unique
+  username  String?
+  role      UserRole @default(USER)
+  
+  // Preferences
+  preferences            Json? // Flexible JSONB for user preferences
+  defaultStake           Decimal?  @map("default_stake") @db.Decimal(10, 2)
+  preferredOddsFormat    OddsFormat @default(AMERICAN) @map("preferred_odds_format")
+  pushNotificationsEnabled Boolean @default(true) @map("push_notifications_enabled")
+  
+  // Push notification tokens
+  expoPushTokens String[] @map("expo_push_tokens") // Array of Expo push tokens
+  
+  // Timestamps
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  lastLoginAt DateTime? @map("last_login_at")
+  
+  // Relations
+  sportsbookLinks UserSportsbookLink[]
+  bets            Bet[]
+  messages        Message[]
+  
+  @@map("users")
+  @@index([auth0Sub])
+  @@index([email])
+}
+
+enum UserRole {
+  USER
+  PREMIUM
+  ADMIN
+}
+
+enum OddsFormat {
+  AMERICAN
+  DECIMAL
+  FRACTIONAL
+}
+
+// ============================================================================
+// SPORTSBOOKS
+// ============================================================================
+
+model Sportsbook {
+  id          String   @id @default(cuid())
+  key         String   @unique // Unique identifier (e.g., "fanduel", "draftkings")
+  name        String
+  displayName String   @map("display_name")
+  logoUrl     String?  @map("logo_url")
+  
+  // Deep linking configuration
+  deepLinkTemplate String? @map("deep_link_template") // URL template with placeholders
+  iosScheme        String? @map("ios_scheme")
+  androidPackage   String? @map("android_package")
+  webUrl           String? @map("web_url")
+  
+  // Supported markets and configuration
+  supportedMarkets String[] @map("supported_markets") // Array of market types
+  config           Json? // Additional book-specific configuration
+  
+  // Status
+  isActive    Boolean  @default(true) @map("is_active")
+  displayOrder Int     @default(999) @map("display_order")
+  
+  // Timestamps
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  
+  // Relations
+  userLinks     UserSportsbookLink[]
+  oddsSnapshots OddsSnapshot[]
+  bets          Bet[]
+  
+  @@map("sportsbooks")
+  @@index([key])
+  @@index([isActive])
+}
+
+// ============================================================================
+// USER-SPORTSBOOK RELATIONSHIPS
+// ============================================================================
+
+model UserSportsbookLink {
+  id String @id @default(cuid())
+  
+  userId       String      @map("user_id")
+  user         User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  sportsbookId String      @map("sportsbook_id")
+  sportsbook   Sportsbook  @relation(fields: [sportsbookId], references: [id], onDelete: Cascade)
+  
+  // User-specific configuration
+  preferenceOrder Int     @default(999) @map("preference_order")
+  isEnabled       Boolean @default(true) @map("is_enabled")
+  
+  // Timestamps
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  
+  @@unique([userId, sportsbookId])
+  @@map("user_sportsbook_links")
+  @@index([userId])
+  @@index([sportsbookId])
+}
+
+// ============================================================================
+// SPORTS EVENTS & MARKETS
+// ============================================================================
+
+model Event {
+  id String @id @default(cuid())
+  
+  // Event identification
+  sportType String @map("sport_type") // e.g., "NFL", "NBA", "UFC", "MLB"
+  league    String // e.g., "NFL", "NBA", "UFC", "Premier League"
+  
+  // Participants
+  homeTeam String @map("home_team")
+  awayTeam String @map("away_team")
+  
+  // Canonical team mapping (for normalization)
+  homeTeamCanonical String? @map("home_team_canonical")
+  awayTeamCanonical String? @map("away_team_canonical")
+  
+  // External provider IDs
+  externalIds Json? @map("external_ids") // { "unabated": "...", "theodds": "..." }
+  
+  // Timing
+  startTime DateTime  @map("start_time")
+  status    EventStatus @default(SCHEDULED)
+  
+  // Metadata
+  venue     String?
+  season    String?
+  week      String?
+  
+  // Timestamps
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  
+  // Relations
+  markets       Market[]
+  bets          Bet[]
+  
+  @@map("events")
+  @@index([sportType, startTime])
+  @@index([league, startTime])
+  @@index([startTime])
+  @@index([status])
+}
+
+enum EventStatus {
+  SCHEDULED
+  LIVE
+  FINISHED
+  CANCELLED
+  POSTPONED
+}
+
+model Market {
+  id String @id @default(cuid())
+  
+  eventId String @map("event_id")
+  event   Event  @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  
+  // Market type and parameters
+  marketType MarketType @map("market_type")
+  parameters Json?      // Additional parameters (e.g., handicap value, total line)
+  
+  // Market key for deduplication
+  marketKey String @map("market_key") // Composite key: eventId + marketType + parameters
+  
+  // Timestamps
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  
+  // Relations
+  oddsSnapshots OddsSnapshot[]
+  bets          Bet[]
+  
+  @@unique([eventId, marketKey])
+  @@map("markets")
+  @@index([eventId])
+  @@index([marketType])
+}
+
+enum MarketType {
+  MONEYLINE
+  SPREAD
+  TOTAL_OVER
+  TOTAL_UNDER
+  PLAYER_PROP
+  TEAM_PROP
+  FUTURES
+  LIVE
+}
+
+// ============================================================================
+// ODDS DATA (Append-only immutable snapshots)
+// ============================================================================
+
+model OddsSnapshot {
+  id String @id @default(cuid())
+  
+  eventId String? @map("event_id")
+  
+  marketId String @map("market_id")
+  market   Market @relation(fields: [marketId], references: [id], onDelete: Cascade)
+  
+  sportsbookId String     @map("sportsbook_id")
+  sportsbook   Sportsbook @relation(fields: [sportsbookId], references: [id], onDelete: Cascade)
+  
+  // Outcome identifier (e.g., "home", "away", "over", "under")
+  outcome String
+  
+  // Odds in multiple formats
+  oddsAmerican Int     @map("odds_american")
+  oddsDecimal  Decimal @map("odds_decimal") @db.Decimal(10, 4)
+  
+  // Deduplication hash
+  snapshotHash String @map("snapshot_hash") // Hash of marketId + sportsbookId + outcome + odds
+  
+  // Metadata
+  timestamp DateTime @default(now())
+  
+  @@unique([snapshotHash, timestamp])
+  @@map("odds_snapshots")
+  @@index([marketId, sportsbookId])
+  @@index([timestamp])
+  @@index([eventId, timestamp])
+}
+
+// ============================================================================
+// BETS
+// ============================================================================
+
+model Bet {
+  id String @id @default(cuid())
+  
+  userId String @map("user_id")
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  eventId String @map("event_id")
+  event   Event  @relation(fields: [eventId], references: [id])
+  
+  marketId String @map("market_id")
+  market   Market @relation(fields: [marketId], references: [id])
+  
+  sportsbookId String     @map("sportsbook_id")
+  sportsbook   Sportsbook @relation(fields: [sportsbookId], references: [id])
+  
+  // Bet details
+  selectedOutcome String  @map("selected_outcome")
+  stake           Decimal @db.Decimal(10, 2)
+  
+  // Odds at confirmation (locked in)
+  oddsAmerican Int     @map("odds_american")
+  oddsDecimal  Decimal @map("odds_decimal") @db.Decimal(10, 4)
+  
+  // LLM recommendation context
+  llmRecommendation Json? @map("llm_recommendation") // Stores reasoning, confidence, etc.
+  
+  // Deep link used
+  deepLink String? @map("deep_link")
+  
+  // Bet status tracking
+  status BetStatus @default(PENDING)
+  
+  // Settlement
+  result    BetResult? @map("result")
+  settledAt DateTime?  @map("settled_at")
+  payout    Decimal?   @db.Decimal(10, 2)
+  
+  // Timestamps
+  createdAt   DateTime  @default(now()) @map("created_at")
+  confirmedAt DateTime? @map("confirmed_at")
+  guidedAt    DateTime? @map("guided_at")
+  
+  @@map("bets")
+  @@index([userId, createdAt])
+  @@index([status])
+  @@index([eventId])
+}
+
+enum BetStatus {
+  PENDING      // Created, awaiting confirmation
+  CONFIRMED    // User confirmed, awaiting guide link
+  GUIDED       // Deep link generated and provided to user
+  PLACED       // User reported successful placement
+  CANCELLED    // User cancelled before placement
+  SETTLED      // Bet has been settled
+}
+
+enum BetResult {
+  WIN
+  LOSS
+  PUSH
+  VOID
+}
+
+// ============================================================================
+// CHAT & MESSAGES
+// ============================================================================
+
+model Message {
+  id String @id @default(cuid())
+  
+  userId String @map("user_id")
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  conversationId String @map("conversation_id") // Groups messages into conversations
+  
+  role    MessageRole
+  content String      @db.Text
+  
+  // Token tracking
+  tokenCount Int? @map("token_count")
+  
+  // Metadata
+  metadata Json? // Additional context like bet references, odds snapshots, etc.
+  
+  // Timestamps
+  createdAt DateTime @default(now()) @map("created_at")
+  
+  @@map("messages")
+  @@index([userId, conversationId, createdAt])
+  @@index([conversationId, createdAt])
+}
+
+enum MessageRole {
+  USER
+  ASSISTANT
+  SYSTEM
+}
+
+// ============================================================================
+// RAG: DOCUMENTS & CHUNKS (for semantic search)
+// ============================================================================
+
+model Document {
+  id String @id @default(cuid())
+  
+  title       String
+  description String? @db.Text
+  content     String  @db.Text
+  
+  // Document metadata
+  sourceUrl  String? @map("source_url")
+  sourceType String  @map("source_type") // e.g., "betting_guide", "historical_analysis", "news"
+  metadata   Json? // Additional structured metadata
+  
+  // Status
+  isActive Boolean @default(true) @map("is_active")
+  
+  // Timestamps
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  
+  // Relations
+  chunks Chunk[]
+  
+  @@map("documents")
+  @@index([sourceType])
+  @@index([isActive])
+}
+
+model Chunk {
+  id String @id @default(cuid())
+  
+  documentId String   @map("document_id")
+  document   Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  
+  // Chunk content
+  content String @db.Text
+  
+  // Vector embedding (pgvector)
+  embedding Unsupported("vector(1536)")? // OpenAI ada-002 dimension
+  
+  // Chunk metadata
+  chunkIndex Int  @map("chunk_index") // Position within document
+  metadata   Json? // Additional chunk-specific metadata
+  
+  // Timestamps
+  createdAt DateTime @default(now()) @map("created_at")
+  
+  @@map("chunks")
+  @@index([documentId, chunkIndex])
+}
+
+// ============================================================================
+// CANONICAL TEAM MAPPING (for odds normalization)
+// ============================================================================
+
+model TeamMapping {
+  id String @id @default(cuid())
+  
+  // Canonical identifier
+  canonicalName String @unique @map("canonical_name")
+  sport         String
+  league        String
+  
+  // Provider-specific aliases
+  aliases Json // { "unabated": "...", "theodds": "...", "variants": [...] }
+  
+  // Metadata
+  logoUrl String? @map("logo_url")
+  
+  // Timestamps
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  
+  @@map("team_mappings")
+  @@index([sport, league])
+}
+
+// ============================================================================
+// IDEMPOTENCY TRACKING
+// ============================================================================
+
+model IdempotencyKey {
+  id String @id // The idempotency key itself
+  
+  // Request context
+  userId   String @map("user_id")
+  endpoint String
+  method   String
+  
+  // Response cache
+  statusCode   Int    @map("status_code")
+  responseBody String @map("response_body") @db.Text
+  
+  // Timestamps
+  createdAt DateTime @default(now()) @map("created_at")
+  expiresAt DateTime @map("expires_at")
+  
+  @@map("idempotency_keys")
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+// ============================================================================
+// JOB TRACKING (for monitoring BullMQ jobs)
+// ============================================================================
+
+model JobLog {
+  id String @id @default(cuid())
+  
+  jobId     String @map("job_id")
+  queueName String @map("queue_name")
+  jobType   String @map("job_type")
+  
+  status JobLogStatus @default(PENDING)
+  
+  // Job data and result
+  inputData  Json? @map("input_data")
+  outputData Json? @map("output_data")
+  error      String? @db.Text
+  
+  // Timestamps
+  startedAt   DateTime? @map("started_at")
+  completedAt DateTime? @map("completed_at")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  
+  @@map("job_logs")
+  @@index([queueName, status])
+  @@index([jobId])
+}
+
+enum JobLogStatus {
+  PENDING
+  ACTIVE
+  COMPLETED
+  FAILED
+  DELAYED
+}
