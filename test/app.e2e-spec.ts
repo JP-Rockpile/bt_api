@@ -64,7 +64,8 @@ describe('AppController (e2e)', () => {
     it('/api/docs should serve Swagger UI', () => {
       return request(app.getHttpServer())
         .get('/api/docs')
-        .expect(301); // Redirect to /api/docs/
+        .expect(200) // Swagger UI is served directly
+        .expect('Content-Type', /html/); // Should return HTML
     });
   });
 });
