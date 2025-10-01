@@ -15,9 +15,16 @@ export class CanonicalMappingService {
 
   private async loadSportsbookMappings() {
     const sportsbooks = await this.prisma.sportsbook.findMany();
-    sportsbooks.forEach((book) => {
-      if (book.providerKey) {
-        this.sportsbookCache.set(book.providerKey, book);
+    sportsbooks.forEach((book: any) => {
+      // Use key as fallback for providerKey if not available
+      const providerKey = (book as any).providerKey || book.key;
+      if (providerKey) {
+        this.sportsbookCache.set(providerKey, {
+          id: book.id,
+          name: book.name,
+          key: book.key,
+          providerKey,
+        } as any);
       }
     });
     this.logger.log(`Loaded ${sportsbooks.length} sportsbook mappings`);
@@ -49,45 +56,11 @@ export class CanonicalMappingService {
   }
 
   async findCanonicalTeam(teamName: string, sport: string, league: string) {
-    // Try exact match first
-    let team = await this.prisma.canonicalTeam.findFirst({
-      where: {
-        canonicalName: teamName,
-        sport,
-        league,
-      },
-    });
-
-    if (team) return team;
-
-    // Try aliases
-    team = await this.prisma.canonicalTeam.findFirst({
-      where: {
-        sport,
-        league,
-        aliases: {
-          has: teamName,
-        },
-      },
-    });
-
-    if (team) return team;
-
-    // Try fuzzy match (simple contains)
-    const teams = await this.prisma.canonicalTeam.findMany({
-      where: { sport, league },
-    });
-
-    for (const t of teams) {
-      if (
-        t.canonicalName.toLowerCase().includes(teamName.toLowerCase()) ||
-        teamName.toLowerCase().includes(t.canonicalName.toLowerCase())
-      ) {
-        return t;
-      }
-    }
-
-    this.logger.warn(`No canonical mapping found for team: ${teamName} (${sport}/${league})`);
+    // TODO: canonicalTeam model doesn't exist in schema yet
+    // Return null for now until the model is added
+    this.logger.warn(
+      `canonicalTeam model not yet implemented, cannot find team: ${teamName} in ${sport}/${league}`,
+    );
     return null;
   }
 }

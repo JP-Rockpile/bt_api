@@ -1,115 +1,111 @@
 /**
- * Utility functions for odds calculations and conversions
+ * Odds conversion utilities
  */
 
+import * as crypto from 'crypto';
+
 /**
- * Convert American odds to decimal odds
+ * Convert American odds to decimal
  */
-export function americanToDecimal(americanOdds: number): number {
-  if (americanOdds > 0) {
-    return americanOdds / 100 + 1;
+export function americanToDecimal(american: number): number {
+  if (american > 0) {
+    return Number((american / 100 + 1).toFixed(4));
   } else {
-    return 100 / Math.abs(americanOdds) + 1;
+    return Number((100 / Math.abs(american) + 1).toFixed(4));
   }
 }
 
 /**
- * Convert decimal odds to American odds
+ * Convert decimal odds to American
  */
-export function decimalToAmerican(decimalOdds: number): number {
-  if (decimalOdds >= 2.0) {
-    return Math.round((decimalOdds - 1) * 100);
+export function decimalToAmerican(decimal: number): number {
+  if (decimal >= 2.0) {
+    return Math.round((decimal - 1) * 100);
   } else {
-    return Math.round(-100 / (decimalOdds - 1));
+    return Math.round(-100 / (decimal - 1));
   }
 }
 
 /**
  * Calculate implied probability from American odds
  */
-export function impliedProbability(americanOdds: number): number {
-  if (americanOdds > 0) {
-    return 100 / (americanOdds + 100);
+export function impliedProbability(american: number): number {
+  if (american > 0) {
+    return Number((100 / (american + 100)).toFixed(4));
   } else {
-    return Math.abs(americanOdds) / (Math.abs(americanOdds) + 100);
+    return Number((Math.abs(american) / (Math.abs(american) + 100)).toFixed(4));
   }
 }
 
 /**
- * Calculate juice (vig) from two-way market odds
+ * Calculate juice/vig from two-way market odds
  */
-export function calculateJuice(odds1: number, odds2: number): number {
-  const prob1 = impliedProbability(odds1);
-  const prob2 = impliedProbability(odds2);
-  return (prob1 + prob2 - 1) * 100;
+export function calculateJuice(side1American: number, side2American: number): number {
+  const prob1 = impliedProbability(side1American);
+  const prob2 = impliedProbability(side2American);
+  return Number(((prob1 + prob2 - 1) * 100).toFixed(2));
 }
 
 /**
- * Calculate expected value (EV)
+ * Calculate expected value (EV) percentage
  */
-export function calculateEV(stake: number, americanOdds: number, trueProbability: number): number {
-  const decimalOdds = americanToDecimal(americanOdds);
-  const payout = stake * decimalOdds;
-  return trueProbability * payout - stake;
+export function calculateEV(odds: number, trueProbability: number): number {
+  const decimal = americanToDecimal(odds);
+  return Number(((trueProbability * decimal - 1) * 100).toFixed(2));
 }
 
 /**
- * Calculate potential payout from stake and odds
+ * Calculate Closing Line Value (CLV)
+ * @param betOdds - The odds when the bet was placed
+ * @param closingOdds - The odds when the line closed
+ * @returns CLV as a percentage
  */
-export function calculatePayout(stake: number, americanOdds: number): number {
-  const decimalOdds = americanToDecimal(americanOdds);
-  return stake * decimalOdds;
+export function calculateCLV(betOdds: number, closingOdds: number): number {
+  const betDecimal = americanToDecimal(betOdds);
+  const closingDecimal = americanToDecimal(closingOdds);
+  return Number((((betDecimal - closingDecimal) / closingDecimal) * 100).toFixed(2));
+}
+
+/**
+ * Determine if odds represent +EV
+ */
+export function isPositiveEV(odds: number, trueProbability: number): boolean {
+  return calculateEV(odds, trueProbability) > 0;
 }
 
 /**
  * Find best odds from multiple sportsbooks
  */
-export interface OddsOption {
-  sportsbookId: string;
-  sportsbookName: string;
-  americanOdds: number;
-  decimalOdds: number;
-}
+export function findBestOdds(oddsArray: Array<{ sportsbook: string; odds: number }>): {
+  sportsbook: string;
+  odds: number;
+  advantage?: number;
+} | null {
+  if (!oddsArray || oddsArray.length === 0) return null;
 
-export function findBestOdds(options: OddsOption[]): OddsOption | null {
-  if (options.length === 0) return null;
-
-  return options.reduce((best, current) => {
-    // Higher American odds are better (both positive and negative)
-    // For negative odds, closer to 0 is better (-110 > -120)
-    // For positive odds, higher is better (+150 > +120)
-    if (current.americanOdds > 0 && best.americanOdds > 0) {
-      return current.americanOdds > best.americanOdds ? current : best;
-    } else if (current.americanOdds < 0 && best.americanOdds < 0) {
-      return current.americanOdds > best.americanOdds ? current : best;
-    } else {
-      return current.americanOdds > best.americanOdds ? current : best;
-    }
+  const best = oddsArray.reduce((prev, current) => {
+    return current.odds > prev.odds ? current : prev;
   });
+
+  // Calculate advantage over average
+  const avgOdds = oddsArray.reduce((sum, item) => sum + item.odds, 0) / oddsArray.length;
+  const advantage = Number((((best.odds - avgOdds) / Math.abs(avgOdds)) * 100).toFixed(2));
+
+  return {
+    ...best,
+    advantage,
+  };
 }
 
 /**
- * Identify positive EV opportunities
+ * Create a hash for deduplication
  */
-export function identifyPlusEV(
-  odds: OddsOption[],
-  fairOdds: number,
-  threshold: number = 0.02, // 2% edge
-): OddsOption[] {
-  const fairProb = impliedProbability(fairOdds);
-
-  return odds.filter((option) => {
-    const impliedProb = impliedProbability(option.americanOdds);
-    const edge = fairProb - impliedProb;
-    return edge >= threshold;
-  });
-}
-
-/**
- * Calculate Closing Line Value (CLV)
- */
-export function calculateCLV(betOdds: number, closingOdds: number): number {
-  const betProb = impliedProbability(betOdds);
-  const closingProb = impliedProbability(closingOdds);
-  return ((closingProb - betProb) / betProb) * 100;
+export function createSnapshotHash(
+  marketId: string,
+  sportsbookId: string,
+  outcome: string,
+  odds: number,
+): string {
+  const data = `${marketId}:${sportsbookId}:${outcome}:${odds}`;
+  return crypto.createHash('sha256').update(data).digest('hex');
 }

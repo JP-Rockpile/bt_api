@@ -23,13 +23,13 @@
       "@/*": [
         "src/*"
       ],
-      "@/config/*": [
+      "@config/*": [
         "src/config/*"
       ],
-      "@/common/*": [
+      "@common/*": [
         "src/common/*"
       ],
-      "@/modules/*": [
+      "@modules/*": [
         "src/modules/*"
       ]
     }

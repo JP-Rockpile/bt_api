@@ -16,11 +16,16 @@ export class TheOddsApiAdapter {
     private configService: ConfigService,
     private mappingService: CanonicalMappingService,
   ) {
-    this.apiKey = this.configService.get<string>('ODDS_API_KEY');
-    this.baseUrl = this.configService.get<string>('ODDS_API_BASE_URL');
+    this.apiKey = this.configService.get<string>('ODDS_API_KEY') ?? '';
+    this.baseUrl = this.configService.get<string>('ODDS_API_BASE_URL') ?? '';
   }
 
-  async fetchOdds(event: { id: string; sport: string }): Promise<Array<Record<string, unknown>>> {
+  async fetchOdds(event: {
+    id: string;
+    sport: string;
+    externalIds?: Record<string, string>;
+    markets?: Array<{ id: string; marketType: string }>;
+  }): Promise<Array<Record<string, unknown>>> {
     try {
       const externalId = event.externalIds?.odds_api;
       if (!externalId) {
@@ -50,7 +55,12 @@ export class TheOddsApiAdapter {
   }
 
   private normalizeOdds(
-    event: { id: string; sport: string },
+    event: {
+      id: string;
+      sport: string;
+      externalIds?: Record<string, string>;
+      markets?: Array<{ id: string; marketType: string }>;
+    },
     rawOdds: Array<Record<string, unknown>>,
   ): Array<Record<string, unknown>> {
     const normalized = [];
@@ -58,7 +68,7 @@ export class TheOddsApiAdapter {
     for (const eventData of rawOdds) {
       if (!eventData.bookmakers) continue;
 
-      for (const bookmaker of eventData.bookmakers) {
+      for (const bookmaker of eventData.bookmakers as any[]) {
         const sportsbookMapping = this.mappingService.mapSportsbook(bookmaker.key, 'odds_api');
 
         if (!sportsbookMapping) {
@@ -66,11 +76,11 @@ export class TheOddsApiAdapter {
           continue;
         }
 
-        for (const market of bookmaker.markets) {
+        for (const market of bookmaker.markets as any[]) {
           const marketType = this.mappingService.mapMarketType(market.key);
 
           // Find matching market in database
-          const dbMarket = event.markets.find((m) => m.marketType === marketType);
+          const dbMarket = event.markets?.find((m: any) => m.marketType === marketType);
           if (!dbMarket) continue;
 
           for (const outcome of market.outcomes) {

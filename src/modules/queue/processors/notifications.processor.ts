@@ -26,11 +26,15 @@ export class NotificationsProcessor extends WorkerHost {
     try {
       switch (job.name) {
         case 'bet-confirmation':
-          return await this.sendBetConfirmation(job.data);
+          return await this.sendBetConfirmation(job.data as { userId: string; betId: string });
         case 'odds-movement':
-          return await this.sendOddsMovement(job.data);
+          return await this.sendOddsMovement(
+            job.data as { userId: string; marketId: string; oldOdds: number; newOdds: number },
+          );
         case 'promotion':
-          return await this.sendPromotion(job.data);
+          return await this.sendPromotion(
+            job.data as { userId: string; promotionData: Record<string, unknown> },
+          );
         default:
           throw new Error(`Unknown notification type: ${job.name}`);
       }
@@ -54,18 +58,18 @@ export class NotificationsProcessor extends WorkerHost {
       },
     });
 
-    if (!user?.deviceTokens || user.deviceTokens.length === 0) {
+    if (!user?.expoPushTokens || user.expoPushTokens.length === 0) {
       this.logger.warn(`No device tokens for user ${data.userId}`);
       return;
     }
 
-    const messages: ExpoPushMessage[] = user.deviceTokens
-      .filter((token) => Expo.isExpoPushToken(token))
-      .map((token) => ({
+    const messages: ExpoPushMessage[] = user.expoPushTokens
+      .filter((token: string) => Expo.isExpoPushToken(token))
+      .map((token: string) => ({
         to: token,
         sound: 'default',
         title: 'Bet Confirmed! 🎯',
-        body: `${bet.selectedOutcome} at ${bet.americanOdds > 0 ? '+' : ''}${bet.americanOdds} on ${bet.sportsbook.displayName}`,
+        body: `${bet?.selectedOutcome} at ${bet?.oddsAmerican! > 0 ? '+' : ''}${bet?.oddsAmerican} on ${bet?.sportsbook.displayName}`,
         data: { betId: data.betId },
       }));
 
@@ -82,13 +86,13 @@ export class NotificationsProcessor extends WorkerHost {
       where: { id: data.userId },
     });
 
-    if (!user?.deviceTokens || user.deviceTokens.length === 0) {
+    if (!user?.expoPushTokens || user.expoPushTokens.length === 0) {
       return;
     }
 
-    const messages: ExpoPushMessage[] = user.deviceTokens
-      .filter((token) => Expo.isExpoPushToken(token))
-      .map((token) => ({
+    const messages: ExpoPushMessage[] = user.expoPushTokens
+      .filter((token: string) => Expo.isExpoPushToken(token))
+      .map((token: string) => ({
         to: token,
         sound: 'default',
         title: 'Odds Movement Alert 📊',
@@ -104,17 +108,17 @@ export class NotificationsProcessor extends WorkerHost {
       where: { id: data.userId },
     });
 
-    if (!user?.deviceTokens || user.deviceTokens.length === 0) {
+    if (!user?.expoPushTokens || user.expoPushTokens.length === 0) {
       return;
     }
 
-    const messages: ExpoPushMessage[] = user.deviceTokens
-      .filter((token) => Expo.isExpoPushToken(token))
-      .map((token) => ({
+    const messages: ExpoPushMessage[] = user.expoPushTokens
+      .filter((token: string) => Expo.isExpoPushToken(token))
+      .map((token: string) => ({
         to: token,
         sound: 'default',
-        title: data.promotionData.title || 'Special Offer! 🎁',
-        body: data.promotionData.message,
+        title: (data.promotionData.title as string) || 'Special Offer! 🎁',
+        body: data.promotionData.message as string,
         data: data.promotionData,
       }));
 

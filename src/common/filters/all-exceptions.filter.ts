@@ -58,10 +58,6 @@ export class AllExceptionsFilter implements ExceptionFilter {
       }
     }
 
-    interface ExtendedRequest extends Request {
-      id?: string;
-    }
-
     const errorResponse: ErrorResponse & { stack?: string } = {
       statusCode: status,
       message,
@@ -69,7 +65,7 @@ export class AllExceptionsFilter implements ExceptionFilter {
       errorCode,
       timestamp: new Date().toISOString(),
       path: request.url,
-      requestId: (request as ExtendedRequest).id,
+      requestId: (request as any).id,
     };
 
     // Log error details

@@ -1,5 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication, ValidationPipe } from '@nestjs/common';
+import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import request from 'supertest';
 import { AppModule } from './../src/app.module';
 
@@ -21,11 +22,24 @@ describe('AppController (e2e)', () => {
       }),
     );
 
+    // Setup Swagger for testing
+    const config = new DocumentBuilder()
+      .setTitle('Bet Think API')
+      .setDescription('Core backend API for Bet Think')
+      .setVersion('1.0')
+      .build();
+    const document = SwaggerModule.createDocument(app, config);
+    SwaggerModule.setup('api/docs', app, document);
+
     await app.init();
   });
 
   afterAll(async () => {
-    await app.close();
+    if (app) {
+      await app.close();
+    }
+    // Give time for all connections to close
+    await new Promise((resolve) => setTimeout(resolve, 500));
   });
 
   describe('Health Checks', () => {

@@ -159,7 +159,6 @@ export class QueueService implements OnModuleInit {
       {
         removeOnComplete: true,
         attempts: 2,
-        timeout: 60000, // 60 seconds
       },
     );
   }

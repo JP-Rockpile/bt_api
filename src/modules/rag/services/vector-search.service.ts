@@ -55,18 +55,18 @@ export class VectorSearchService {
         `Vector search found ${filtered.length} results above threshold ${threshold}`,
       );
 
-      return filtered.map((r) => ({
+      return filtered.map((r: any) => ({
         id: r.id,
         documentId: r.document_id,
         content: r.content,
         chunkIndex: r.chunk_index,
         metadata: r.metadata,
         document: {
-          title: r.document_title,
-          source: r.document_source,
-          sourceUrl: r.document_source_url,
+          title: r.document_title || r.title,
+          source: r.document_source || r.source,
+          sourceUrl: r.document_source_url || r.source_url,
         },
-        similarity: parseFloat(r.similarity),
+        similarity: typeof r.similarity === 'number' ? r.similarity : parseFloat(r.similarity),
       }));
     } catch (error) {
       this.logger.error(`Vector search failed: ${error.message}`);

@@ -26,7 +26,7 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
     // Log queries in development
     if (process.env.NODE_ENV !== 'production') {
       // @ts-expect-error - Prisma event types are not fully typed
-      this.$on('query', (e) => {
+      this.$on('query', (e: any) => {
         this.logger.debug(`Query: ${e.query}`);
         this.logger.debug(`Duration: ${e.duration}ms`);
       });

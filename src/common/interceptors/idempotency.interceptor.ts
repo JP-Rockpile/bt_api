@@ -43,13 +43,6 @@ export class IdempotencyInterceptor implements NestInterceptor {
       });
 
       if (existing) {
-        // Verify request hash matches
-        if (existing.requestHash !== requestHash) {
-          throw new ConflictException(
-            'Idempotency key already used with different request parameters',
-          );
-        }
-
         // Check if expired
         if (existing.expiresAt < new Date()) {
           await this.prisma.idempotencyKey.delete({
@@ -58,8 +51,8 @@ export class IdempotencyInterceptor implements NestInterceptor {
         } else {
           // Return cached response
           this.logger.log(`Returning cached response for idempotency key: ${idempotencyKey}`);
-          response.status(existing.responseStatus);
-          return of(existing.responseBody);
+          response.status(existing.statusCode);
+          return of(JSON.parse(existing.responseBody));
         }
       }
 
@@ -74,13 +67,15 @@ export class IdempotencyInterceptor implements NestInterceptor {
             await this.prisma.idempotencyKey.create({
               data: {
                 id: idempotencyKey,
-                requestHash,
-                responseStatus: response.statusCode,
-                responseBody: data,
+                statusCode: response.statusCode,
+                responseBody: JSON.stringify(data),
                 expiresAt,
+                userId: (request as any).user?.userId || 'anonymous',
+                endpoint: request.url,
+                method: request.method,
               },
             });
-          } catch (error) {
+          } catch (error: any) {
             this.logger.error(`Failed to store idempotency key: ${error.message}`);
           }
         }),

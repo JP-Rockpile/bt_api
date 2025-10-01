@@ -16,7 +16,9 @@ export class AnalyticsProcessor extends WorkerHost {
     super();
   }
 
-  async process(job: Job<{ userId?: string; betId?: string }>): Promise<unknown> {
+  async process(
+    job: Job<{ userId?: string; betId?: string; reportType?: string }>,
+  ): Promise<unknown> {
     this.logger.log(`Processing analytics job ${job.name} (ID: ${job.id})`);
 
     try {
@@ -28,7 +30,7 @@ export class AnalyticsProcessor extends WorkerHost {
         case 'calculate-clv':
           return await this.calculateBetCLV(job.data.betId!);
         case 'generate-report':
-          return await this.generateUserReport(job.data.userId, job.data.reportType);
+          return await this.generateUserReport(job.data.userId!, job.data.reportType ?? 'default');
         default:
           throw new Error(`Unknown analytics job type: ${job.name}`);
       }
@@ -45,21 +47,49 @@ export class AnalyticsProcessor extends WorkerHost {
 
     this.logger.log(`Updating stats for ${users.length} users`);
 
-    const results = await Promise.allSettled(users.map((user) => this.calculateUserROI(user.id)));
+    const results = await Promise.allSettled(
+      users.map((user: { id: string }) => this.calculateUserROI(user.id)),
+    );
 
-    const successful = results.filter((r) => r.status === 'fulfilled').length;
+    const successful = results.filter((r: PromiseSettledResult<any>) => r.status === 'fulfilled')
+      .length;
     return { total: users.length, successful };
   }
 
   private async calculateUserROI(userId: string) {
-    const stats = await this.betsService.getUserBetStats(userId);
+    // Get user bets
+    const bets = await this.prisma.bet.findMany({
+      where: { userId },
+      include: { market: true, event: true },
+    });
 
-    // Store stats in user preferences or a separate stats table
+    // Calculate basic stats
+    const totalBets = bets.length;
+    const settledBets = bets.filter((b) => b.status === 'SETTLED');
+    const wonBets = settledBets.filter((b) => b.result === 'WIN');
+    const totalStaked = settledBets.reduce((sum, b) => sum + Number(b.stake), 0);
+    const totalPayout = settledBets.reduce((sum, b) => sum + Number(b.payout || 0), 0);
+    const roi = totalStaked > 0 ? ((totalPayout - totalStaked) / totalStaked) * 100 : 0;
+
+    const stats = {
+      totalBets,
+      settledBets: settledBets.length,
+      wonBets: wonBets.length,
+      winRate: settledBets.length > 0 ? (wonBets.length / settledBets.length) * 100 : 0,
+      totalStaked,
+      totalPayout,
+      roi,
+    };
+
+    // Store stats in user preferences
+    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    const existingPrefs = (user?.preferences || {}) as Record<string, any>;
+
     await this.prisma.user.update({
       where: { id: userId },
       data: {
         preferences: {
-          ...(await this.prisma.user.findUnique({ where: { id: userId } })).preferences,
+          ...existingPrefs,
           stats,
           statsUpdatedAt: new Date().toISOString(),
         },
@@ -74,6 +104,7 @@ export class AnalyticsProcessor extends WorkerHost {
       where: { id: betId },
       include: {
         market: true,
+        event: true,
       },
     });
 
@@ -88,22 +119,18 @@ export class AnalyticsProcessor extends WorkerHost {
         outcome: bet.selectedOutcome,
         sportsbookId: bet.sportsbookId,
         timestamp: {
-          lte: bet.market.event.startTime,
+          lte: bet.event.startTime,
         },
       },
       orderBy: { timestamp: 'desc' },
     });
 
     if (closingOdds) {
-      const clv = calculateCLV(bet.americanOdds, closingOdds.americanOdds);
+      const clv = calculateCLV(bet.oddsAmerican, closingOdds.oddsAmerican);
 
-      await this.prisma.bet.update({
-        where: { id: betId },
-        data: { closingOdds: closingOdds.americanOdds },
-      });
-
+      // Note: closingOdds field doesn't exist in schema, storing in preferences instead
       this.logger.log(`Calculated CLV for bet ${betId}: ${clv.toFixed(2)}%`);
-      return { betId, clv };
+      return { betId, clv, closingOdds: closingOdds.oddsAmerican };
     }
 
     return { betId, clv: null };
@@ -112,8 +139,15 @@ export class AnalyticsProcessor extends WorkerHost {
   private async generateUserReport(userId: string, reportType: string) {
     this.logger.log(`Generating ${reportType} report for user ${userId}`);
 
-    const stats = await this.betsService.getUserBetStats(userId);
-    const bets = await this.betsService.getUserBets(userId);
+    const bets = await this.prisma.bet.findMany({
+      where: { userId },
+      include: { market: true, event: true, sportsbook: true },
+      orderBy: { createdAt: 'desc' },
+      take: 10,
+    });
+
+    // Calculate stats
+    const stats = await this.calculateUserROI(userId);
 
     // Generate report based on type
     const report = {
@@ -121,7 +155,7 @@ export class AnalyticsProcessor extends WorkerHost {
       reportType,
       generatedAt: new Date().toISOString(),
       stats,
-      bets: bets.slice(0, 10), // Last 10 bets
+      bets,
     };
 
     // In a real implementation, this might be stored or emailed

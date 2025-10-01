@@ -44,7 +44,7 @@ export class IdempotencyMiddleware implements NestMiddleware {
 
         // Store in Redis if successful
         if (statusCode >= 200 && statusCode < 300) {
-          const ttlHours = this.configService.get<number>('security.idempotencyKeyTtlHours') || 24;
+          const ttlHours: number = (this.configService.get('security.idempotencyKeyTtlHours') as number) ?? 24;
 
           this.redisService
             .storeIdempotencyKey(
@@ -55,7 +55,7 @@ export class IdempotencyMiddleware implements NestMiddleware {
               },
               ttlHours,
             )
-            .catch((err) => {
+            .catch((err: Error) => {
               this.logger.error(`Failed to store idempotency key: ${err.message}`);
             });
         }

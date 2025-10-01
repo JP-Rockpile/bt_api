@@ -93,7 +93,7 @@ export class SseService {
     const client = this.clients.get(clientId);
 
     if (client) {
-      client.subject.next(data);
+      client.subject.next({ data } as MessageEvent);
       this.logger.debug(`Message sent to stream ${clientId}:`, data.type);
     } else {
       this.logger.warn(`No active stream for ${clientId}`);
