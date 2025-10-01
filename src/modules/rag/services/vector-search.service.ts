@@ -25,6 +25,9 @@ export class VectorSearchService {
           chunk_index: number;
           metadata: unknown;
           similarity: number;
+          document_title: string;
+          document_source: string;
+          document_source_url: string;
         }>
       >(
         `
@@ -35,7 +38,7 @@ export class VectorSearchService {
           c.chunk_index,
           c.metadata,
           d.title as document_title,
-          d.source as document_source,
+          d.source_type as document_source,
           d.source_url as document_source_url,
           1 - (c.embedding <=> $1::vector) as similarity
         FROM chunks c
@@ -55,28 +58,19 @@ export class VectorSearchService {
         `Vector search found ${filtered.length} results above threshold ${threshold}`,
       );
 
-      return filtered.map(
-        (r: {
-          id: string;
-          document_id: string;
-          content: string;
-          chunk_index: number;
-          metadata: unknown;
-          similarity: number;
-        }) => ({
-          id: r.id,
-          documentId: r.document_id,
-          content: r.content,
-          chunkIndex: r.chunk_index,
-          metadata: r.metadata,
-          document: {
-            title: r.document_title || r.title,
-            source: r.document_source || r.source,
-            sourceUrl: r.document_source_url || r.source_url,
-          },
-          similarity: typeof r.similarity === 'number' ? r.similarity : parseFloat(r.similarity),
-        }),
-      );
+      return filtered.map((r) => ({
+        id: r.id,
+        documentId: r.document_id,
+        content: r.content,
+        chunkIndex: r.chunk_index,
+        metadata: r.metadata,
+        document: {
+          title: r.document_title,
+          source: r.document_source,
+          sourceUrl: r.document_source_url,
+        },
+        similarity: typeof r.similarity === 'number' ? r.similarity : parseFloat(r.similarity),
+      }));
     } catch (error) {
       this.logger.error(`Vector search failed: ${error.message}`);
       throw error;

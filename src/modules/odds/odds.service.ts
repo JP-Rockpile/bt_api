@@ -6,6 +6,7 @@ import { UnabatedAdapter } from './adapters/unabated.adapter';
 import { TheOddsApiAdapter } from './adapters/theodds.adapter';
 import { OddsUtils } from '../../common/utils/odds.utils';
 import { OddsData } from './adapters/base-odds.adapter';
+import { MarketType, Prisma } from '@prisma/client';
 
 @Injectable()
 export class OddsService {
@@ -298,8 +299,8 @@ export class OddsService {
             update: {},
             create: {
               eventId: event.id,
-              marketType: marketData.marketType,
-              parameters: marketData.parameters,
+              marketType: marketData.marketType as MarketType,
+              parameters: marketData.parameters ? (marketData.parameters as any) : null,
               marketKey,
             },
           });

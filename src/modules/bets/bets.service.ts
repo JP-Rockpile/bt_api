@@ -151,7 +151,7 @@ export class BetsService {
     const where: Prisma.BetWhereInput = { userId };
 
     if (status) {
-      where.status = status;
+      where.status = status as any;
     }
 
     return this.prisma.bet.findMany({

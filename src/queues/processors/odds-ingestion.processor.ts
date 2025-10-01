@@ -44,7 +44,7 @@ export class OddsIngestionProcessor extends WorkerHost {
           queueName: 'odds-ingestion',
           jobType: eventId ? 'event-refresh' : 'sport-refresh',
           status: 'ACTIVE',
-          inputData: job.data as Prisma.InputJsonValue,
+          inputData: job.data as any,
           startedAt: new Date(),
         },
       });
@@ -72,7 +72,7 @@ export class OddsIngestionProcessor extends WorkerHost {
         where: { jobId: job.id },
         data: {
           status: 'COMPLETED',
-          outputData: logResult as Prisma.InputJsonValue,
+          outputData: logResult as any,
           completedAt: new Date(),
         },
       });
