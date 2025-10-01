@@ -1,5 +1,22 @@
 import { Injectable, Logger } from '@nestjs/common';
 
+interface BetWithRelations {
+  sportsbook: {
+    name: string;
+    providerKey: string;
+    deepLinkTemplate?: string;
+  };
+  event: {
+    externalIds?: Record<string, string>;
+  };
+  market: {
+    marketType: string;
+  };
+  selectedOutcome: string;
+  americanOdds: number;
+  stake: number;
+}
+
 @Injectable()
 export class DeepLinkService {
   private readonly logger = new Logger(DeepLinkService.name);
@@ -8,7 +25,7 @@ export class DeepLinkService {
    * Generate sportsbook-specific deep link
    * Each sportsbook has its own URL scheme and parameters
    */
-  generateDeepLink(bet: any): string {
+  generateDeepLink(bet: BetWithRelations): string | null {
     const sportsbook = bet.sportsbook;
 
     if (!sportsbook.deepLinkTemplate) {
@@ -21,7 +38,10 @@ export class DeepLinkService {
       let deepLink = sportsbook.deepLinkTemplate;
 
       // Common replacements
-      deepLink = deepLink.replace('{eventId}', bet.event.externalIds?.[sportsbook.providerKey] || '');
+      deepLink = deepLink.replace(
+        '{eventId}',
+        bet.event.externalIds?.[sportsbook.providerKey] || '',
+      );
       deepLink = deepLink.replace('{marketType}', bet.market.marketType.toLowerCase());
       deepLink = deepLink.replace('{outcome}', encodeURIComponent(bet.selectedOutcome));
       deepLink = deepLink.replace('{odds}', bet.americanOdds.toString());
@@ -44,21 +64,21 @@ export class DeepLinkService {
     }
   }
 
-  private generateDraftKingsLink(bet: any): string {
+  private generateDraftKingsLink(bet: BetWithRelations): string {
     // DraftKings deep link format
     const eventId = bet.event.externalIds?.draftkings || '';
     const baseUrl = 'draftkings://sportsbook';
     return `${baseUrl}/event/${eventId}?market=${bet.market.marketType}&selection=${bet.selectedOutcome}`;
   }
 
-  private generateFanDuelLink(bet: any): string {
+  private generateFanDuelLink(bet: BetWithRelations): string {
     // FanDuel deep link format
     const eventId = bet.event.externalIds?.fanduel || '';
     const baseUrl = 'fanduel://sportsbook';
     return `${baseUrl}/event/${eventId}?bet=${bet.selectedOutcome}`;
   }
 
-  private generateBetMGMLink(bet: any): string {
+  private generateBetMGMLink(bet: BetWithRelations): string {
     // BetMGM deep link format
     const eventId = bet.event.externalIds?.betmgm || '';
     const baseUrl = 'betmgm://sports';
@@ -68,12 +88,11 @@ export class DeepLinkService {
   /**
    * Generate a fallback web link if deep linking fails
    */
-  generateWebLink(bet: any): string {
+  generateWebLink(bet: BetWithRelations): string {
     const sportsbook = bet.sportsbook;
-    
+
     // Most sportsbooks have a web interface
     // This is a fallback for when deep links aren't supported
     return `https://${sportsbook.name.toLowerCase().replace(/\s+/g, '')}.com/sports`;
   }
 }
-

@@ -14,7 +14,7 @@ import { OddsModule } from '../modules/odds/odds.module';
   imports: [
     HttpModule,
     OddsModule,
-    
+
     // Register BullMQ queues
     BullModule.registerQueue(
       {
@@ -28,12 +28,7 @@ import { OddsModule } from '../modules/odds/odds.module';
       },
     ),
   ],
-  providers: [
-    OddsIngestionProcessor,
-    NotificationsProcessor,
-    AnalyticsProcessor,
-  ],
+  providers: [OddsIngestionProcessor, NotificationsProcessor, AnalyticsProcessor],
   exports: [BullModule],
 })
 export class QueuesModule {}
-

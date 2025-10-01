@@ -1,4 +1,13 @@
-import { IsString, IsOptional, IsObject, IsArray, IsNumber, IsInt, Min, Max } from 'class-validator';
+import {
+  IsString,
+  IsOptional,
+  IsObject,
+  IsArray,
+  IsNumber,
+  IsInt,
+  Min,
+  Max,
+} from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class CreateDocumentDto {
@@ -23,7 +32,7 @@ export class CreateDocumentDto {
   @ApiPropertyOptional({ description: 'Additional metadata' })
   @IsOptional()
   @IsObject()
-  metadata?: any;
+  metadata?: Record<string, unknown>;
 }
 
 export class CreateChunkDto {
@@ -39,7 +48,7 @@ export class CreateChunkDto {
   @ApiPropertyOptional({ description: 'Chunk metadata' })
   @IsOptional()
   @IsObject()
-  metadata?: any;
+  metadata?: Record<string, unknown>;
 }
 
 export class SearchDto {
@@ -62,4 +71,3 @@ export class SearchDto {
   @Max(1)
   threshold?: number;
 }
-

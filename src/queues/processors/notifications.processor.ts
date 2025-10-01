@@ -10,7 +10,7 @@ export interface NotificationJobData {
   type: 'bet_confirmed' | 'odds_movement' | 'bet_settled' | 'promotion';
   title: string;
   body: string;
-  data?: Record<string, any>;
+  data?: Record<string, unknown>;
 }
 
 @Processor('notifications', {
@@ -32,7 +32,9 @@ export class NotificationsProcessor extends WorkerHost {
     });
   }
 
-  async process(job: Job<NotificationJobData>): Promise<any> {
+  async process(
+    job: Job<NotificationJobData>,
+  ): Promise<{ sent: boolean; ticketCount: number; type: string; timestamp: string; reason?: string }> {
     const { userId, type, title, body, data } = job.data;
 
     this.logger.log(`Processing notification job ${job.id} for user ${userId}: ${type}`);
@@ -46,12 +48,12 @@ export class NotificationsProcessor extends WorkerHost {
 
       if (!user || !user.pushNotificationsEnabled) {
         this.logger.debug(`User ${userId} has notifications disabled`);
-        return { sent: false, reason: 'notifications_disabled' };
+        return { sent: false, ticketCount: 0, type, timestamp: new Date().toISOString(), reason: 'notifications_disabled' };
       }
 
       if (!user.expoPushTokens || user.expoPushTokens.length === 0) {
         this.logger.debug(`User ${userId} has no push tokens registered`);
-        return { sent: false, reason: 'no_tokens' };
+        return { sent: false, ticketCount: 0, type, timestamp: new Date().toISOString(), reason: 'no_tokens' };
       }
 
       // Build push messages
@@ -70,7 +72,7 @@ export class NotificationsProcessor extends WorkerHost {
 
       if (messages.length === 0) {
         this.logger.warn(`User ${userId} has no valid Expo push tokens`);
-        return { sent: false, reason: 'invalid_tokens' };
+        return { sent: false, ticketCount: 0, type, timestamp: new Date().toISOString(), reason: 'invalid_tokens' };
       }
 
       // Send notifications
@@ -82,7 +84,8 @@ export class NotificationsProcessor extends WorkerHost {
           const ticketChunk = await this.expo.sendPushNotificationsAsync(chunk);
           tickets.push(...ticketChunk);
         } catch (error) {
-          this.logger.error(`Error sending notification chunk: ${error.message}`);
+          const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+          this.logger.error(`Error sending notification chunk: ${errorMessage}`);
         }
       }
 
@@ -95,7 +98,9 @@ export class NotificationsProcessor extends WorkerHost {
         timestamp: new Date().toISOString(),
       };
     } catch (error) {
-      this.logger.error(`Notification job ${job.id} failed: ${error.message}`, error.stack);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      const errorStack = error instanceof Error ? error.stack : undefined;
+      this.logger.error(`Notification job ${job.id} failed: ${errorMessage}`, errorStack);
       throw error;
     }
   }
@@ -110,4 +115,3 @@ export class NotificationsProcessor extends WorkerHost {
     this.logger.error(`Notification job ${job.id} failed: ${error.message}`);
   }
 }
-

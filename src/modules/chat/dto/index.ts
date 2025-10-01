@@ -23,7 +23,7 @@ export class CreateMessageDto {
   @ApiPropertyOptional({ description: 'Additional metadata' })
   @IsOptional()
   @IsObject()
-  metadata?: any;
+  metadata?: Record<string, unknown>;
 }
 
 export class GetMessagesDto {
@@ -57,4 +57,3 @@ export class GetMessagesDto {
   @Min(0)
   offset?: number;
 }
-

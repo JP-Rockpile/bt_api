@@ -13,6 +13,10 @@ export class IdempotencyMiddleware implements NestMiddleware {
   ) {}
 
   async use(req: Request, res: Response, next: NextFunction) {
+    interface RequestWithUser extends Request {
+      user?: { userId?: string };
+    }
+
     const idempotencyKey = req.headers['idempotency-key'] as string;
 
     // Only process for mutation methods
@@ -20,7 +24,7 @@ export class IdempotencyMiddleware implements NestMiddleware {
       return next();
     }
 
-    const userId = (req as any).user?.userId || 'anonymous';
+    const userId = (req as RequestWithUser).user?.userId || 'anonymous';
     const fullKey = `${userId}:${req.path}:${idempotencyKey}`;
 
     try {
@@ -34,13 +38,13 @@ export class IdempotencyMiddleware implements NestMiddleware {
 
       // Capture the response
       const originalJson = res.json.bind(res);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       res.json = function (body: any) {
         const statusCode = res.statusCode;
 
         // Store in Redis if successful
         if (statusCode >= 200 && statusCode < 300) {
-          const ttlHours =
-            this.configService.get<number>('security.idempotencyKeyTtlHours') || 24;
+          const ttlHours = this.configService.get<number>('security.idempotencyKeyTtlHours') || 24;
 
           this.redisService
             .storeIdempotencyKey(
@@ -66,4 +70,3 @@ export class IdempotencyMiddleware implements NestMiddleware {
     }
   }
 }
-

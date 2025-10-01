@@ -26,4 +26,3 @@ export class SportsbooksController {
     return this.sportsbooksService.findOne(id);
   }
 }
-

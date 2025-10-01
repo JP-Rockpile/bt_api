@@ -10,6 +10,5 @@ export class PlanBetDto {
   @ApiProperty({ description: 'Optional conversation context', required: false })
   @IsOptional()
   @IsObject()
-  context?: Record<string, any>;
+  context?: Record<string, unknown>;
 }
-

@@ -7,9 +7,9 @@
  */
 export function americanToDecimal(americanOdds: number): number {
   if (americanOdds > 0) {
-    return (americanOdds / 100) + 1;
+    return americanOdds / 100 + 1;
   } else {
-    return (100 / Math.abs(americanOdds)) + 1;
+    return 100 / Math.abs(americanOdds) + 1;
   }
 }
 
@@ -47,11 +47,7 @@ export function calculateJuice(odds1: number, odds2: number): number {
 /**
  * Calculate expected value (EV)
  */
-export function calculateEV(
-  stake: number,
-  americanOdds: number,
-  trueProbability: number,
-): number {
+export function calculateEV(stake: number, americanOdds: number, trueProbability: number): number {
   const decimalOdds = americanToDecimal(americanOdds);
   const payout = stake * decimalOdds;
   return trueProbability * payout - stake;
@@ -77,7 +73,7 @@ export interface OddsOption {
 
 export function findBestOdds(options: OddsOption[]): OddsOption | null {
   if (options.length === 0) return null;
-  
+
   return options.reduce((best, current) => {
     // Higher American odds are better (both positive and negative)
     // For negative odds, closer to 0 is better (-110 > -120)
@@ -101,7 +97,7 @@ export function identifyPlusEV(
   threshold: number = 0.02, // 2% edge
 ): OddsOption[] {
   const fairProb = impliedProbability(fairOdds);
-  
+
   return odds.filter((option) => {
     const impliedProb = impliedProbability(option.americanOdds);
     const edge = fairProb - impliedProb;
@@ -117,4 +113,3 @@ export function calculateCLV(betOdds: number, closingOdds: number): number {
   const closingProb = impliedProbability(closingOdds);
   return ((closingProb - betProb) / betProb) * 100;
 }
-

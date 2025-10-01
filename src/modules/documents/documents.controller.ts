@@ -39,4 +39,3 @@ export class DocumentsController {
     return this.documentsService.vectorSearch(embedding, limit, threshold);
   }
 }
-

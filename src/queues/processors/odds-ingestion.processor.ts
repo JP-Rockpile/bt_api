@@ -28,7 +28,7 @@ export class OddsIngestionProcessor extends WorkerHost {
     super();
   }
 
-  async process(job: Job<OddsIngestionJobData>): Promise<any> {
+  async process(job: Job<OddsIngestionJobData>): Promise<{ stored: number; total: number }> {
     const { sport, league, eventId, priority } = job.data;
 
     this.logger.log(
@@ -39,11 +39,11 @@ export class OddsIngestionProcessor extends WorkerHost {
       // Log job start
       await this.prisma.jobLog.create({
         data: {
-          jobId: job.id,
+          jobId: job.id || 'unknown',
           queueName: 'odds-ingestion',
           jobType: eventId ? 'event-refresh' : 'sport-refresh',
           status: 'ACTIVE',
-          inputData: job.data,
+          inputData: job.data as any,
           startedAt: new Date(),
         },
       });
@@ -52,7 +52,7 @@ export class OddsIngestionProcessor extends WorkerHost {
       if (eventId) {
         // Refresh specific event
         oddsData = await this.oddsService.aggregateOdds(sport, league);
-        oddsData = oddsData.filter((od: any) => od.eventExternalId === eventId);
+        oddsData = oddsData.filter((od) => od.eventExternalId === eventId);
       } else {
         // Refresh entire sport/league
         oddsData = await this.oddsService.aggregateOdds(sport, league);
@@ -60,7 +60,7 @@ export class OddsIngestionProcessor extends WorkerHost {
 
       const storedCount = await this.oddsService.storeOddsSnapshots(oddsData);
 
-      const result = {
+      const logResult = {
         eventsProcessed: oddsData.length,
         snapshotsStored: storedCount,
         timestamp: new Date().toISOString(),
@@ -71,7 +71,7 @@ export class OddsIngestionProcessor extends WorkerHost {
         where: { jobId: job.id },
         data: {
           status: 'COMPLETED',
-          outputData: result,
+          outputData: logResult as any,
           completedAt: new Date(),
         },
       });
@@ -80,16 +80,18 @@ export class OddsIngestionProcessor extends WorkerHost {
         `Odds ingestion job ${job.id} completed: ${storedCount} snapshots from ${oddsData.length} events`,
       );
 
-      return result;
+      return { stored: storedCount, total: oddsData.length };
     } catch (error) {
-      this.logger.error(`Odds ingestion job ${job.id} failed: ${error.message}`, error.stack);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      const errorStack = error instanceof Error ? error.stack : undefined;
+      this.logger.error(`Odds ingestion job ${job.id} failed: ${errorMessage}`, errorStack);
 
       // Log failure
       await this.prisma.jobLog.updateMany({
         where: { jobId: job.id },
         data: {
           status: 'FAILED',
-          error: error.message,
+          error: errorMessage,
           completedAt: new Date(),
         },
       });
@@ -113,4 +115,3 @@ export class OddsIngestionProcessor extends WorkerHost {
     this.logger.debug(`Job ${job.id} is now active`);
   }
 }
-

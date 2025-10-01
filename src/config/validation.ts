@@ -1,5 +1,7 @@
 import * as Joi from 'joi';
 
+const isTestEnvironment = process.env.NODE_ENV === 'test';
+
 export const validationSchema = Joi.object({
   // Application
   NODE_ENV: Joi.string().valid('development', 'production', 'test').default('development'),
@@ -7,10 +9,16 @@ export const validationSchema = Joi.object({
   API_PREFIX: Joi.string().default('api'),
   API_VERSION: Joi.string().default('v1'),
 
-  // Auth0
-  AUTH0_DOMAIN: Joi.string().required(),
-  AUTH0_AUDIENCE: Joi.string().required(),
-  AUTH0_ISSUER: Joi.string().required(),
+  // Auth0 - Allow test values in test environment
+  AUTH0_DOMAIN: isTestEnvironment 
+    ? Joi.string().default('test.auth0.com')
+    : Joi.string().required(),
+  AUTH0_AUDIENCE: isTestEnvironment
+    ? Joi.string().default('test-audience')
+    : Joi.string().required(),
+  AUTH0_ISSUER: isTestEnvironment
+    ? Joi.string().default('https://test.auth0.com/')
+    : Joi.string().required(),
 
   // Database
   DATABASE_URL: Joi.string().required(),
@@ -23,14 +31,18 @@ export const validationSchema = Joi.object({
   REDIS_DB: Joi.number().default(0),
   REDIS_TLS_ENABLED: Joi.boolean().default(false),
 
-  // Odds Providers
-  UNABATED_API_KEY: Joi.string().required(),
+  // Odds Providers - Allow test keys in test environment
+  UNABATED_API_KEY: isTestEnvironment
+    ? Joi.string().default('test-unabated-key')
+    : Joi.string().required(),
   UNABATED_BASE_URL: Joi.string().default('https://api.unabated.com/v1'),
-  THE_ODDS_API_KEY: Joi.string().required(),
+  THE_ODDS_API_KEY: isTestEnvironment
+    ? Joi.string().default('test-the-odds-api-key')
+    : Joi.string().required(),
   THE_ODDS_API_BASE_URL: Joi.string().default('https://api.the-odds-api.com/v4'),
 
   // Expo
-  EXPO_ACCESS_TOKEN: Joi.string().optional(),
+  EXPO_ACCESS_TOKEN: Joi.string().optional().allow(''),
 
   // Rate Limiting
   RATE_LIMIT_TTL: Joi.number().default(60),
@@ -48,12 +60,10 @@ export const validationSchema = Joi.object({
   // Observability
   OTEL_ENABLED: Joi.boolean().default(false),
   OTEL_SERVICE_NAME: Joi.string().default('bt-api'),
-  JAEGER_ENDPOINT: Joi.string().optional(),
+  JAEGER_ENDPOINT: Joi.string().optional().allow(''),
 
   // Logging
-  LOG_LEVEL: Joi.string()
-    .valid('trace', 'debug', 'info', 'warn', 'error', 'fatal')
-    .default('info'),
+  LOG_LEVEL: Joi.string().valid('trace', 'debug', 'info', 'warn', 'error', 'fatal').default('info'),
   LOG_PRETTY_PRINT: Joi.boolean().default(false),
 
   // CORS
@@ -69,4 +79,3 @@ export const validationSchema = Joi.object({
   IDEMPOTENCY_KEY_TTL_HOURS: Joi.number().default(24),
   JWT_CACHE_TTL_SECONDS: Joi.number().default(3600),
 });
-

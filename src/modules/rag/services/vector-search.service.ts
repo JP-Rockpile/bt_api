@@ -17,7 +17,17 @@ export class VectorSearchService {
 
       // Use raw SQL for vector similarity search
       // Using cosine distance operator (<=>)
-      const results = await this.prisma.$queryRawUnsafe<any[]>(`
+      const results = await this.prisma.$queryRawUnsafe<
+        Array<{
+          id: string;
+          document_id: string;
+          content: string;
+          chunk_index: number;
+          metadata: unknown;
+          similarity: number;
+        }>
+      >(
+        `
         SELECT 
           c.id,
           c.document_id,
@@ -33,12 +43,17 @@ export class VectorSearchService {
         WHERE c.embedding IS NOT NULL
         ORDER BY c.embedding <=> $1::vector
         LIMIT $2
-      `, embeddingString, limit);
+      `,
+        embeddingString,
+        limit,
+      );
 
       // Filter by threshold
       const filtered = results.filter((r) => r.similarity >= threshold);
 
-      this.logger.log(`Vector search found ${filtered.length} results above threshold ${threshold}`);
+      this.logger.log(
+        `Vector search found ${filtered.length} results above threshold ${threshold}`,
+      );
 
       return filtered.map((r) => ({
         id: r.id,
@@ -74,4 +89,3 @@ export class VectorSearchService {
     this.logger.log(`Updated embedding for chunk ${chunkId}`);
   }
 }
-

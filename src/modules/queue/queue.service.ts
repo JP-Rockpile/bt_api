@@ -81,7 +81,12 @@ export class QueueService implements OnModuleInit {
     );
   }
 
-  async sendOddsMovementNotification(userId: string, marketId: string, oldOdds: number, newOdds: number) {
+  async sendOddsMovementNotification(
+    userId: string,
+    marketId: string,
+    oldOdds: number,
+    newOdds: number,
+  ) {
     return this.notificationsQueue.add(
       'odds-movement',
       { userId, marketId, oldOdds, newOdds },
@@ -96,7 +101,7 @@ export class QueueService implements OnModuleInit {
     );
   }
 
-  async sendPromotionNotification(userId: string, promotionData: any) {
+  async sendPromotionNotification(userId: string, promotionData: Record<string, unknown>) {
     return this.notificationsQueue.add(
       'promotion',
       { userId, promotionData },
@@ -206,4 +211,3 @@ export class QueueService implements OnModuleInit {
     }
   }
 }
-

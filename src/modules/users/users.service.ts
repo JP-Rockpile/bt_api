@@ -50,10 +50,13 @@ export class UsersService {
     return user;
   }
 
-  async updateProfile(userId: string, updates: any) {
+  async updateProfile(
+    userId: string,
+    updates: { preferences?: Record<string, unknown>; deviceTokens?: string[] },
+  ) {
     return this.prisma.user.update({
       where: { id: userId },
-      data: updates,
+      data: updates as any,
     });
   }
 

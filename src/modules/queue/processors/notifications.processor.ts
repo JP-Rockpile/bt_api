@@ -20,7 +20,7 @@ export class NotificationsProcessor extends WorkerHost {
     });
   }
 
-  async process(job: Job<any>): Promise<any> {
+  async process(job: Job<Record<string, unknown>>): Promise<unknown> {
     this.logger.log(`Processing notification job ${job.name} (ID: ${job.id})`);
 
     try {
@@ -99,7 +99,7 @@ export class NotificationsProcessor extends WorkerHost {
     return this.sendPushNotifications(messages);
   }
 
-  private async sendPromotion(data: { userId: string; promotionData: any }) {
+  private async sendPromotion(data: { userId: string; promotionData: Record<string, unknown> }) {
     const user = await this.prisma.user.findUnique({
       where: { id: data.userId },
     });
@@ -142,4 +142,3 @@ export class NotificationsProcessor extends WorkerHost {
     return { sent: tickets.length, tickets };
   }
 }
-

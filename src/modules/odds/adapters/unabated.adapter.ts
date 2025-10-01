@@ -18,14 +18,14 @@ export class UnabatedAdapter extends BaseOddsAdapter {
     private prisma: PrismaService,
   ) {
     super('UnabatedAdapter');
-    this.apiKey = this.configService.get<string>('oddsProviders.unabated.apiKey');
-    this.baseUrl = this.configService.get<string>('oddsProviders.unabated.baseUrl');
+    this.apiKey = this.configService.get<string>('oddsProviders.unabated.apiKey') || '';
+    this.baseUrl = this.configService.get<string>('oddsProviders.unabated.baseUrl') || '';
   }
 
   async fetchOdds(sport: string, league?: string): Promise<OddsData[]> {
     try {
       const url = `${this.baseUrl}/odds`;
-      const params: any = {
+      const params: Record<string, string> = {
         sport: sport.toLowerCase(),
       };
 
@@ -36,8 +36,8 @@ export class UnabatedAdapter extends BaseOddsAdapter {
       const response = await firstValueFrom(
         this.httpService.get(url, {
           headers: {
-            'Authorization': `Bearer ${this.apiKey}`,
-            'Accept': 'application/json',
+            Authorization: `Bearer ${this.apiKey}`,
+            Accept: 'application/json',
           },
           params,
         }),
@@ -57,19 +57,16 @@ export class UnabatedAdapter extends BaseOddsAdapter {
       const response = await firstValueFrom(
         this.httpService.get(url, {
           headers: {
-            'Authorization': `Bearer ${this.apiKey}`,
-            'Accept': 'application/json',
+            Authorization: `Bearer ${this.apiKey}`,
+            Accept: 'application/json',
           },
         }),
       );
 
-      const transformed = this.transformUnabatedResponse([response.data]);
+      const transformed = await this.transformUnabatedResponse([response.data]);
       return transformed[0] || null;
     } catch (error) {
-      this.logger.error(
-        `Failed to fetch event odds from Unabated: ${error.message}`,
-        error.stack,
-      );
+      this.logger.error(`Failed to fetch event odds from Unabated: ${error.message}`, error.stack);
       return null;
     }
   }
@@ -103,7 +100,7 @@ export class UnabatedAdapter extends BaseOddsAdapter {
 
     const canonicalNames = allMappings.map((m) => ({
       name: m.canonicalName,
-      aliases: (m.aliases as any)?.variants || [],
+      aliases: (m.aliases as { variants?: string[] })?.variants || [],
     }));
 
     const bestMatch = TeamMappingUtils.findBestMatch(providerName, canonicalNames);
@@ -132,7 +129,7 @@ export class UnabatedAdapter extends BaseOddsAdapter {
       await firstValueFrom(
         this.httpService.get(url, {
           headers: {
-            'Authorization': `Bearer ${this.apiKey}`,
+            Authorization: `Bearer ${this.apiKey}`,
           },
           timeout: 5000,
         }),
@@ -147,36 +144,39 @@ export class UnabatedAdapter extends BaseOddsAdapter {
   /**
    * Transform Unabated API response to our internal format
    */
-  private async transformUnabatedResponse(data: any[]): Promise<OddsData[]> {
+  private async transformUnabatedResponse(
+    data: Array<Record<string, unknown>>,
+  ): Promise<OddsData[]> {
     const results: OddsData[] = [];
 
     for (const event of data) {
       try {
         // Map team names to canonical format
         const homeTeamCanonical = await this.mapTeamName(
-          event.home_team,
-          event.sport,
-          event.league,
+          event.home_team as string,
+          event.sport as string,
+          event.league as string,
         );
         const awayTeamCanonical = await this.mapTeamName(
-          event.away_team,
-          event.sport,
-          event.league,
+          event.away_team as string,
+          event.sport as string,
+          event.league as string,
         );
 
         const markets: MarketOdds[] = [];
+        const eventMarkets = event.markets as any;
 
         // Process moneyline
-        if (event.markets?.moneyline) {
+        if (eventMarkets?.moneyline) {
           markets.push({
             marketType: 'MONEYLINE',
-            outcomes: this.extractOutcomes(event.markets.moneyline, ['home', 'away']),
+            outcomes: this.extractOutcomes(eventMarkets.moneyline, ['home', 'away']),
           });
         }
 
         // Process spreads
-        if (event.markets?.spreads) {
-          for (const spread of event.markets.spreads) {
+        if (eventMarkets?.spreads) {
+          for (const spread of eventMarkets.spreads) {
             markets.push({
               marketType: 'SPREAD',
               parameters: { line: spread.line },
@@ -186,8 +186,8 @@ export class UnabatedAdapter extends BaseOddsAdapter {
         }
 
         // Process totals
-        if (event.markets?.totals) {
-          for (const total of event.markets.totals) {
+        if (eventMarkets?.totals) {
+          for (const total of eventMarkets.totals) {
             markets.push({
               marketType: 'TOTAL_OVER',
               parameters: { line: total.line },
@@ -202,12 +202,12 @@ export class UnabatedAdapter extends BaseOddsAdapter {
         }
 
         results.push({
-          eventExternalId: event.id || event.event_id,
-          sportType: event.sport.toUpperCase(),
-          league: event.league.toUpperCase(),
+          eventExternalId: (event.id || event.event_id) as string,
+          sportType: (event.sport as string).toUpperCase(),
+          league: (event.league as string).toUpperCase(),
           homeTeam: homeTeamCanonical,
           awayTeam: awayTeamCanonical,
-          startTime: new Date(event.start_time || event.commence_time),
+          startTime: new Date((event.start_time || event.commence_time) as string),
           markets,
         });
       } catch (error) {
@@ -221,7 +221,10 @@ export class UnabatedAdapter extends BaseOddsAdapter {
   /**
    * Extract outcome odds from Unabated format
    */
-  private extractOutcomes(oddsData: any, outcomeKeys: string[]): any[] {
+  private extractOutcomes(
+    oddsData: Record<string, unknown>,
+    outcomeKeys: string[],
+  ): Array<{ outcome: string; oddsAmerican: number; oddsDecimal: number; sportsbook: string }> {
     const outcomes = [];
 
     for (const outcome of outcomeKeys) {
@@ -247,14 +250,14 @@ export class UnabatedAdapter extends BaseOddsAdapter {
    */
   private normalizeSportsbookName(name: string): string {
     const mapping: Record<string, string> = {
-      'fanduel': 'fanduel',
-      'draftkings': 'draftkings',
-      'betmgm': 'betmgm',
-      'caesars': 'caesars',
-      'pointsbet': 'pointsbet',
-      'barstool': 'barstool',
-      'wynnbet': 'wynnbet',
-      'unibet': 'unibet',
+      fanduel: 'fanduel',
+      draftkings: 'draftkings',
+      betmgm: 'betmgm',
+      caesars: 'caesars',
+      pointsbet: 'pointsbet',
+      barstool: 'barstool',
+      wynnbet: 'wynnbet',
+      unibet: 'unibet',
     };
 
     return mapping[name.toLowerCase()] || name.toLowerCase();

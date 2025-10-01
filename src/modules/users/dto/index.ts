@@ -5,7 +5,7 @@ export class UpdateUserDto {
   @ApiPropertyOptional({ description: 'User preferences as JSON object' })
   @IsOptional()
   @IsObject()
-  preferences?: any;
+  preferences?: Record<string, unknown>;
 
   @ApiPropertyOptional({ description: 'Expo push notification device tokens' })
   @IsOptional()
@@ -29,4 +29,3 @@ export class LinkSportsbookDto {
   @IsBoolean()
   isVerified?: boolean;
 }
-

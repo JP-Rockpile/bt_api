@@ -21,11 +21,11 @@ export class TheOddsApiAdapter extends BaseOddsAdapter {
     private prisma: PrismaService,
   ) {
     super('TheOddsApiAdapter');
-    this.apiKey = this.configService.get<string>('oddsProviders.theOddsApi.apiKey');
-    this.baseUrl = this.configService.get<string>('oddsProviders.theOddsApi.baseUrl');
+    this.apiKey = this.configService.get<string>('oddsProviders.theOddsApi.apiKey') || '';
+    this.baseUrl = this.configService.get<string>('oddsProviders.theOddsApi.baseUrl') || '';
   }
 
-  async fetchOdds(sport: string, league?: string): Promise<OddsData[]> {
+  async fetchOdds(sport: string, _league?: string): Promise<OddsData[]> {
     try {
       // The Odds API uses sport keys
       const sportKey = this.getSportKey(sport);
@@ -64,7 +64,7 @@ export class TheOddsApiAdapter extends BaseOddsAdapter {
         }),
       );
 
-      const transformed = this.transformTheOddsApiResponse([response.data], 'MMA');
+      const transformed = await this.transformTheOddsApiResponse([response.data], 'MMA');
       return transformed[0] || null;
     } catch (error) {
       this.logger.error(
@@ -104,7 +104,7 @@ export class TheOddsApiAdapter extends BaseOddsAdapter {
 
     const canonicalNames = allMappings.map((m) => ({
       name: m.canonicalName,
-      aliases: (m.aliases as any)?.variants || [],
+      aliases: (m.aliases as { variants?: string[] })?.variants || [],
     }));
 
     const bestMatch = TeamMappingUtils.findBestMatch(providerName, canonicalNames);
@@ -146,9 +146,9 @@ export class TheOddsApiAdapter extends BaseOddsAdapter {
    */
   private getSportKey(sport: string): string {
     const mapping: Record<string, string> = {
-      'MMA': 'mma_mixed_martial_arts',
-      'UFC': 'mma_mixed_martial_arts',
-      'BOXING': 'boxing_boxing',
+      MMA: 'mma_mixed_martial_arts',
+      UFC: 'mma_mixed_martial_arts',
+      BOXING: 'boxing_boxing',
     };
 
     return mapping[sport.toUpperCase()] || sport.toLowerCase();
@@ -157,7 +157,24 @@ export class TheOddsApiAdapter extends BaseOddsAdapter {
   /**
    * Transform The Odds API response to our internal format
    */
-  private async transformTheOddsApiResponse(data: any[], sport: string): Promise<OddsData[]> {
+  private async transformTheOddsApiResponse(
+    data: Array<{
+      id: string;
+      sport_key: string;
+      home_team: string;
+      away_team: string;
+      commence_time: string;
+      teams?: string[];
+      bookmakers: Array<{
+        key: string;
+        markets: Array<{
+          key: string;
+          outcomes: Array<{ name: string; price: number; point?: number }>;
+        }>;
+      }>;
+    }>,
+    sport: string,
+  ): Promise<OddsData[]> {
     const results: OddsData[] = [];
 
     for (const event of data) {
@@ -179,7 +196,7 @@ export class TheOddsApiAdapter extends BaseOddsAdapter {
             for (const market of bookmaker.markets || []) {
               if (market.key === 'h2h') {
                 // Moneyline
-                const outcomes = market.outcomes.map((outcome: any) => ({
+                const outcomes = market.outcomes.map((outcome) => ({
                   outcome: outcome.name === homeTeam ? 'home' : 'away',
                   sportsbook: sportsbookKey,
                   oddsAmerican: outcome.price,
@@ -199,10 +216,11 @@ export class TheOddsApiAdapter extends BaseOddsAdapter {
               } else if (market.key === 'spreads') {
                 // Spread
                 for (const outcome of market.outcomes) {
+                  if (outcome.point === undefined) continue;
+
                   const existingMarket = markets.find(
                     (m) =>
-                      m.marketType === 'SPREAD' &&
-                      m.parameters?.line === Math.abs(outcome.point),
+                      m.marketType === 'SPREAD' && m.parameters?.line === Math.abs(outcome.point!),
                   );
 
                   const outcomeData = {
@@ -225,12 +243,11 @@ export class TheOddsApiAdapter extends BaseOddsAdapter {
               } else if (market.key === 'totals') {
                 // Totals
                 for (const outcome of market.outcomes) {
-                  const marketType =
-                    outcome.name === 'Over' ? 'TOTAL_OVER' : 'TOTAL_UNDER';
+                  if (outcome.point === undefined) continue;
+
+                  const marketType = outcome.name === 'Over' ? 'TOTAL_OVER' : 'TOTAL_UNDER';
                   const existingMarket = markets.find(
-                    (m) =>
-                      m.marketType === marketType &&
-                      m.parameters?.line === outcome.point,
+                    (m) => m.marketType === marketType && m.parameters?.line === outcome.point,
                   );
 
                   const outcomeData = {
@@ -277,19 +294,18 @@ export class TheOddsApiAdapter extends BaseOddsAdapter {
    */
   private normalizeSportsbookName(key: string): string {
     const mapping: Record<string, string> = {
-      'fanduel': 'fanduel',
-      'draftkings': 'draftkings',
-      'betmgm': 'betmgm',
-      'caesars': 'caesars',
-      'pointsbet': 'pointsbet',
-      'barstool': 'barstool',
-      'wynnbet': 'wynnbet',
-      'unibet': 'unibet',
-      'bovada': 'bovada',
-      'betonlineag': 'betonline',
+      fanduel: 'fanduel',
+      draftkings: 'draftkings',
+      betmgm: 'betmgm',
+      caesars: 'caesars',
+      pointsbet: 'pointsbet',
+      barstool: 'barstool',
+      wynnbet: 'wynnbet',
+      unibet: 'unibet',
+      bovada: 'bovada',
+      betonlineag: 'betonline',
     };
 
     return mapping[key.toLowerCase()] || key.toLowerCase();
   }
 }
-

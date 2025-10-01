@@ -25,11 +25,10 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
     return super.canActivate(context);
   }
 
-  handleRequest(err: any, user: any, info: any) {
+  handleRequest(err: Error | null, user: Express.User | false) {
     if (err || !user) {
       throw err || new UnauthorizedException('Authentication required');
     }
     return user;
   }
 }
-

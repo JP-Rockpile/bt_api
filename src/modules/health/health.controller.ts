@@ -42,7 +42,7 @@ export class HealthController {
     try {
       await this.prisma.$queryRaw`SELECT 1`;
       checks.database = true;
-    } catch (error) {
+    } catch (error: any) {
       checks.database = false;
       checks.databaseError = error.message;
     }
@@ -51,7 +51,7 @@ export class HealthController {
     try {
       await this.redis.getClient().ping();
       checks.redis = true;
-    } catch (error) {
+    } catch (error: any) {
       checks.redis = false;
       checks.redisError = error.message;
     }

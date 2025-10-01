@@ -94,4 +94,3 @@ export class RagService {
     return this.vectorSearch.search(queryEmbedding, limit, threshold);
   }
 }
-

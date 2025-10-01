@@ -37,9 +37,10 @@ export class AllExceptionsFilter implements ExceptionFilter {
 
       if (typeof exceptionResponse === 'string') {
         message = exceptionResponse;
-      } else if (typeof exceptionResponse === 'object') {
-        message = (exceptionResponse as any).message || message;
-        errorCode = (exceptionResponse as any).errorCode || errorCode;
+      } else if (typeof exceptionResponse === 'object' && exceptionResponse !== null) {
+        const responseObj = exceptionResponse as { message?: string; errorCode?: string };
+        message = responseObj.message || message;
+        errorCode = responseObj.errorCode || errorCode;
       }
     } else if (exception instanceof Error) {
       message = exception.message;
@@ -57,14 +58,18 @@ export class AllExceptionsFilter implements ExceptionFilter {
       }
     }
 
-    const errorResponse: ErrorResponse = {
+    interface ExtendedRequest extends Request {
+      id?: string;
+    }
+
+    const errorResponse: ErrorResponse & { stack?: string } = {
       statusCode: status,
       message,
       error: HttpStatus[status] || 'Unknown Error',
       errorCode,
       timestamp: new Date().toISOString(),
       path: request.url,
-      requestId: (request as any).id,
+      requestId: (request as ExtendedRequest).id,
     };
 
     // Log error details
@@ -79,7 +84,7 @@ export class AllExceptionsFilter implements ExceptionFilter {
 
     // Don't leak stack traces in production
     if (process.env.NODE_ENV !== 'production' && exception instanceof Error) {
-      (errorResponse as any).stack = exception.stack;
+      errorResponse.stack = exception.stack;
     }
 
     response.status(status).json(errorResponse);

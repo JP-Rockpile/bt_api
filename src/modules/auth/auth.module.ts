@@ -22,4 +22,3 @@ import { APP_GUARD } from '@nestjs/core';
   exports: [PassportModule, JwtModule],
 })
 export class AuthModule {}
-

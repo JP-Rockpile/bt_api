@@ -53,7 +53,27 @@ export class OddsService {
   /**
    * Get odds for a specific event
    */
-  async getEventOdds(eventId: string): Promise<any> {
+  async getEventOdds(eventId: string): Promise<{
+    event: {
+      id: string;
+      sportType: string;
+      league: string;
+      homeTeam: string;
+      awayTeam: string;
+      startTime: Date;
+      status: string;
+    };
+    markets: Array<{
+      marketId: string;
+      marketType: string;
+      parameters: unknown;
+      outcomes: Record<
+        string,
+        Array<{ sportsbookId: string; oddsAmerican: number; oddsDecimal: number; timestamp: Date }>
+      >;
+      bestOdds: Record<string, ReturnType<typeof OddsUtils.findBestOdds>>;
+    }>;
+  }> {
     const event = await this.prisma.event.findUnique({
       where: { id: eventId },
       include: {
@@ -83,7 +103,15 @@ export class OddsService {
         }
       }
 
-      const outcomes: any = {};
+      const outcomes: Record<
+        string,
+        Array<{
+          sportsbookId: string;
+          oddsAmerican: number;
+          oddsDecimal: number;
+          timestamp: Date;
+        }>
+      > = {};
       for (const [, snapshot] of latestOddsByBook) {
         if (!outcomes[snapshot.outcome]) {
           outcomes[snapshot.outcome] = [];
@@ -97,10 +125,10 @@ export class OddsService {
       }
 
       // Calculate best odds for each outcome
-      const bestOdds: any = {};
-      for (const [outcome, odds] of Object.entries(outcomes) as any) {
+      const bestOdds: Record<string, ReturnType<typeof OddsUtils.findBestOdds>> = {};
+      for (const [outcome, odds] of Object.entries(outcomes)) {
         bestOdds[outcome] = OddsUtils.findBestOdds(
-          odds.map((o: any) => ({
+          odds.map((o) => ({
             sportsbook: o.sportsbookId,
             odds: o.oddsAmerican,
           })),
@@ -133,7 +161,24 @@ export class OddsService {
   /**
    * Get best available odds for a specific market
    */
-  async getBestOdds(marketId: string): Promise<any> {
+  async getBestOdds(marketId: string): Promise<{
+    market: {
+      id: string;
+      marketType: string;
+      parameters: unknown;
+      event: {
+        id: string;
+        homeTeam: string;
+        awayTeam: string;
+        startTime: Date;
+      };
+    };
+    odds: Record<
+      string,
+      Array<{ sportsbookId: string; oddsAmerican: number; oddsDecimal: number; timestamp: Date }>
+    >;
+    bestOdds: Record<string, ReturnType<typeof OddsUtils.findBestOdds>>;
+  }> {
     const market = await this.prisma.market.findUnique({
       where: { id: marketId },
       include: {
@@ -159,7 +204,15 @@ export class OddsService {
     }
 
     // Group by outcome
-    const outcomeOdds: any = {};
+    const outcomeOdds: Record<
+      string,
+      Array<{
+        sportsbookId: string;
+        oddsAmerican: number;
+        oddsDecimal: number;
+        timestamp: Date;
+      }>
+    > = {};
     for (const [, snapshot] of latestOdds) {
       if (!outcomeOdds[snapshot.outcome]) {
         outcomeOdds[snapshot.outcome] = [];
@@ -173,10 +226,10 @@ export class OddsService {
     }
 
     // Find best odds for each outcome
-    const bestOdds: any = {};
-    for (const [outcome, odds] of Object.entries(outcomeOdds) as any) {
+    const bestOdds: Record<string, ReturnType<typeof OddsUtils.findBestOdds>> = {};
+    for (const [outcome, odds] of Object.entries(outcomeOdds)) {
       bestOdds[outcome] = OddsUtils.findBestOdds(
-        odds.map((o: any) => ({
+        odds.map((o) => ({
           sportsbook: o.sportsbookId,
           odds: o.oddsAmerican,
         })),
@@ -245,8 +298,8 @@ export class OddsService {
             update: {},
             create: {
               eventId: event.id,
-              marketType: marketData.marketType,
-              parameters: marketData.parameters,
+              marketType: marketData.marketType as any,
+              parameters: marketData.parameters as any,
               marketKey,
             },
           });
@@ -312,8 +365,17 @@ export class OddsService {
     marketId: string,
     startDate?: Date,
     endDate?: Date,
-  ): Promise<any[]> {
-    const where: any = { marketId };
+  ): Promise<
+    Array<{
+      id: string;
+      timestamp: Date;
+      oddsAmerican: number;
+      oddsDecimal: number;
+      sportsbookId: string;
+      outcome: string;
+    }>
+  > {
+    const where: { marketId: string; timestamp?: { gte?: Date; lte?: Date } } = { marketId };
 
     if (startDate || endDate) {
       where.timestamp = {};
@@ -321,12 +383,21 @@ export class OddsService {
       if (endDate) where.timestamp.lte = endDate;
     }
 
-    return this.prisma.oddsSnapshot.findMany({
+    const snapshots = await this.prisma.oddsSnapshot.findMany({
       where,
       orderBy: { timestamp: 'asc' },
       include: {
         sportsbook: true,
       },
     });
+
+    return snapshots.map((snapshot) => ({
+      id: snapshot.id,
+      timestamp: snapshot.timestamp,
+      oddsAmerican: snapshot.oddsAmerican,
+      oddsDecimal: Number(snapshot.oddsDecimal),
+      sportsbookId: snapshot.sportsbookId,
+      outcome: snapshot.outcome,
+    }));
   }
 }

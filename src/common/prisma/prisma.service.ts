@@ -19,13 +19,13 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
   async onModuleInit() {
     // Enable pgvector extension
     await this.$executeRawUnsafe('CREATE EXTENSION IF NOT EXISTS vector');
-    
+
     await this.$connect();
     this.logger.log('Database connected successfully');
 
     // Log queries in development
     if (process.env.NODE_ENV !== 'production') {
-      // @ts-ignore
+      // @ts-expect-error - Prisma event types are not fully typed
       this.$on('query', (e) => {
         this.logger.debug(`Query: ${e.query}`);
         this.logger.debug(`Duration: ${e.duration}ms`);
@@ -38,7 +38,7 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
     this.logger.log('Database disconnected');
   }
 
-  async enableShutdownHooks(app: any) {
+  async enableShutdownHooks(app: { close: () => Promise<void> }) {
     process.on('SIGINT', async () => {
       await app.close();
     });
@@ -47,4 +47,3 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
     });
   }
 }
-

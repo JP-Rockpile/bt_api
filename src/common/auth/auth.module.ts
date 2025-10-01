@@ -13,4 +13,3 @@ import { RolesGuard } from './guards/roles.guard';
   exports: [PassportModule, RolesGuard],
 })
 export class AuthModule {}
-

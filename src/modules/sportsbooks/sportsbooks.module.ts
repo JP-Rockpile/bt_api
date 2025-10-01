@@ -8,4 +8,3 @@ import { SportsbooksController } from './sportsbooks.controller';
   exports: [SportsbooksService],
 })
 export class SportsbooksModule {}
-

@@ -21,7 +21,10 @@ export class UsersController {
   @Put('me')
   @ApiOperation({ summary: 'Update user profile' })
   @ApiResponse({ status: 200, description: 'Updated user profile' })
-  async updateProfile(@CurrentUser('userId') userId: string, @Body() updates: any) {
+  async updateProfile(
+    @CurrentUser('userId') userId: string,
+    @Body() updates: { preferences?: Record<string, unknown>; deviceTokens?: string[] },
+  ) {
     return this.usersService.updateProfile(userId, updates);
   }
 

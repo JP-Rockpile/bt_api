@@ -35,4 +35,3 @@ export class ConfirmBetDto {
   @Type(() => Number)
   oddsAmerican: number;
 }
-

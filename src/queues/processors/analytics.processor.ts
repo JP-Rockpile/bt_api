@@ -2,7 +2,6 @@ import { Processor, WorkerHost, OnWorkerEvent } from '@nestjs/bullmq';
 import { Logger } from '@nestjs/common';
 import { Job } from 'bullmq';
 import { PrismaService } from '../../common/database/prisma.service';
-import { OddsUtils } from '../../common/utils/odds.utils';
 
 export interface AnalyticsJobData {
   userId: string;
@@ -23,13 +22,13 @@ export class AnalyticsProcessor extends WorkerHost {
     super();
   }
 
-  async process(job: Job<AnalyticsJobData>): Promise<any> {
+  async process(job: Job<AnalyticsJobData>): Promise<Record<string, unknown>> {
     const { userId, type, timeRange } = job.data;
 
     this.logger.log(`Processing analytics job ${job.id} for user ${userId}: ${type}`);
 
     try {
-      let result: any;
+      let result: Record<string, unknown>;
 
       switch (type) {
         case 'roi_calculation':
@@ -54,15 +53,14 @@ export class AnalyticsProcessor extends WorkerHost {
         timestamp: new Date().toISOString(),
       };
     } catch (error) {
-      this.logger.error(`Analytics job ${job.id} failed: ${error.message}`, error.stack);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      const errorStack = error instanceof Error ? error.stack : undefined;
+      this.logger.error(`Analytics job ${job.id} failed: ${errorMessage}`, errorStack);
       throw error;
     }
   }
 
-  private async calculateROI(
-    userId: string,
-    timeRange?: { startDate: string; endDate: string },
-  ) {
+  private async calculateROI(userId: string, timeRange?: { startDate: string; endDate: string }) {
     const where: any = {
       userId,
       status: 'SETTLED',
@@ -121,7 +119,7 @@ export class AnalyticsProcessor extends WorkerHost {
           include: {
             oddsSnapshots: {
               where: {
-                outcome: { not: null },
+                outcome: { not: null as any },
               },
               orderBy: { timestamp: 'desc' },
               take: 1,
@@ -137,8 +135,8 @@ export class AnalyticsProcessor extends WorkerHost {
 
     for (const bet of bets) {
       const confirmedOdds = bet.oddsAmerican;
-      const closingSnapshot = bet.market.oddsSnapshots.find(
-        (s) => s.outcome === bet.selectedOutcome && s.sportsbookId === bet.sportsbookId,
+      const closingSnapshot = (bet as any).market.oddsSnapshots.find(
+        (s: any) => s.outcome === bet.selectedOutcome && s.sportsbookId === bet.sportsbookId,
       );
 
       if (closingSnapshot) {
@@ -160,10 +158,7 @@ export class AnalyticsProcessor extends WorkerHost {
     };
   }
 
-  private async analyzeWinRate(
-    userId: string,
-    timeRange?: { startDate: string; endDate: string },
-  ) {
+  private async analyzeWinRate(userId: string, timeRange?: { startDate: string; endDate: string }) {
     const where: any = {
       userId,
       status: 'SETTLED',
@@ -203,9 +198,9 @@ export class AnalyticsProcessor extends WorkerHost {
     const pushes = bets.filter((bet) => bet.result === 'PUSH').length;
 
     // Segment by sport
-    const bySport: any = {};
+    const bySport: Record<string, any> = {};
     for (const bet of bets) {
-      const sport = bet.event.sportType;
+      const sport = (bet as any).event.sportType;
       if (!bySport[sport]) {
         bySport[sport] = { total: 0, wins: 0, losses: 0 };
       }
@@ -242,4 +237,3 @@ export class AnalyticsProcessor extends WorkerHost {
     this.logger.error(`Analytics job ${job.id} failed: ${error.message}`);
   }
 }
-

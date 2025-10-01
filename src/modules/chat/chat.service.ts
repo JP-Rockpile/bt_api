@@ -22,7 +22,7 @@ export class ChatService {
     conversationId: string,
     role: MessageRole,
     content: string,
-    metadata?: any,
+    metadata?: Record<string, unknown>,
   ) {
     return this.prisma.message.create({
       data: {
@@ -30,7 +30,7 @@ export class ChatService {
         conversationId,
         role,
         content,
-        metadata,
+        metadata: metadata as any,
       },
     });
   }

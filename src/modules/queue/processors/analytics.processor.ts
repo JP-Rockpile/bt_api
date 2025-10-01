@@ -16,7 +16,7 @@ export class AnalyticsProcessor extends WorkerHost {
     super();
   }
 
-  async process(job: Job<any>): Promise<any> {
+  async process(job: Job<{ userId?: string; betId?: string }>): Promise<unknown> {
     this.logger.log(`Processing analytics job ${job.name} (ID: ${job.id})`);
 
     try {
@@ -24,9 +24,9 @@ export class AnalyticsProcessor extends WorkerHost {
         case 'update-user-stats':
           return await this.updateAllUserStats();
         case 'calculate-roi':
-          return await this.calculateUserROI(job.data.userId);
+          return await this.calculateUserROI(job.data.userId!);
         case 'calculate-clv':
-          return await this.calculateBetCLV(job.data.betId);
+          return await this.calculateBetCLV(job.data.betId!);
         case 'generate-report':
           return await this.generateUserReport(job.data.userId, job.data.reportType);
         default:
@@ -45,9 +45,7 @@ export class AnalyticsProcessor extends WorkerHost {
 
     this.logger.log(`Updating stats for ${users.length} users`);
 
-    const results = await Promise.allSettled(
-      users.map((user) => this.calculateUserROI(user.id)),
-    );
+    const results = await Promise.allSettled(users.map((user) => this.calculateUserROI(user.id)));
 
     const successful = results.filter((r) => r.status === 'fulfilled').length;
     return { total: users.length, successful };
@@ -55,7 +53,7 @@ export class AnalyticsProcessor extends WorkerHost {
 
   private async calculateUserROI(userId: string) {
     const stats = await this.betsService.getUserBetStats(userId);
-    
+
     // Store stats in user preferences or a separate stats table
     await this.prisma.user.update({
       where: { id: userId },
@@ -98,7 +96,7 @@ export class AnalyticsProcessor extends WorkerHost {
 
     if (closingOdds) {
       const clv = calculateCLV(bet.americanOdds, closingOdds.americanOdds);
-      
+
       await this.prisma.bet.update({
         where: { id: betId },
         data: { closingOdds: closingOdds.americanOdds },
@@ -130,4 +128,3 @@ export class AnalyticsProcessor extends WorkerHost {
     return report;
   }
 }
-

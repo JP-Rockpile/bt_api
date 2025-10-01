@@ -83,4 +83,3 @@ export const configuration = () => ({
 });
 
 export type Configuration = ReturnType<typeof configuration>;
-

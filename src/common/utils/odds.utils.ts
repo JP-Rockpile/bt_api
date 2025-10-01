@@ -2,15 +2,17 @@
  * Odds conversion utilities
  */
 
+import * as crypto from 'crypto';
+
 export class OddsUtils {
   /**
    * Convert American odds to decimal
    */
   static americanToDecimal(american: number): number {
     if (american > 0) {
-      return Number(((american / 100) + 1).toFixed(4));
+      return Number((american / 100 + 1).toFixed(4));
     } else {
-      return Number(((100 / Math.abs(american)) + 1).toFixed(4));
+      return Number((100 / Math.abs(american) + 1).toFixed(4));
     }
   }
 
@@ -49,7 +51,6 @@ export class OddsUtils {
    * Calculate expected value (EV) percentage
    */
   static calculateEV(odds: number, trueProbability: number): number {
-    const impliedProb = this.impliedProbability(odds);
     const decimal = this.americanToDecimal(odds);
     return Number(((trueProbability * decimal - 1) * 100).toFixed(2));
   }
@@ -64,9 +65,7 @@ export class OddsUtils {
   /**
    * Find best odds from multiple sportsbooks
    */
-  static findBestOdds(
-    oddsArray: Array<{ sportsbook: string; odds: number }>,
-  ): {
+  static findBestOdds(oddsArray: Array<{ sportsbook: string; odds: number }>): {
     sportsbook: string;
     odds: number;
     advantage?: number;
@@ -78,9 +77,8 @@ export class OddsUtils {
     });
 
     // Calculate advantage over average
-    const avgOdds =
-      oddsArray.reduce((sum, item) => sum + item.odds, 0) / oddsArray.length;
-    const advantage = Number(((best.odds - avgOdds) / Math.abs(avgOdds) * 100).toFixed(2));
+    const avgOdds = oddsArray.reduce((sum, item) => sum + item.odds, 0) / oddsArray.length;
+    const advantage = Number((((best.odds - avgOdds) / Math.abs(avgOdds)) * 100).toFixed(2));
 
     return {
       ...best,
@@ -97,9 +95,7 @@ export class OddsUtils {
     outcome: string,
     odds: number,
   ): string {
-    const crypto = require('crypto');
     const data = `${marketId}:${sportsbookId}:${outcome}:${odds}`;
     return crypto.createHash('sha256').update(data).digest('hex');
   }
 }
-

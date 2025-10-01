@@ -4,7 +4,10 @@ import { PrismaService } from '@common/prisma/prisma.service';
 @Injectable()
 export class CanonicalMappingService {
   private readonly logger = new Logger(CanonicalMappingService.name);
-  private sportsbookCache: Map<string, any> = new Map();
+  private sportsbookCache: Map<
+    string,
+    { id: string; name: string; key: string; providerKey: string }
+  > = new Map();
 
   constructor(private prisma: PrismaService) {
     this.loadSportsbookMappings();
@@ -20,7 +23,10 @@ export class CanonicalMappingService {
     this.logger.log(`Loaded ${sportsbooks.length} sportsbook mappings`);
   }
 
-  mapSportsbook(providerKey: string, provider: string): any | null {
+  mapSportsbook(
+    providerKey: string,
+    provider: string,
+  ): { id: string; name: string; key: string } | null {
     const cacheKey = `${provider}:${providerKey}`;
     return this.sportsbookCache.get(cacheKey) || null;
   }
@@ -28,15 +34,15 @@ export class CanonicalMappingService {
   mapMarketType(providerMarketType: string): string {
     const mappings: Record<string, string> = {
       // Unabated
-      'moneyline': 'MONEYLINE',
-      'spread': 'SPREAD',
-      'total': 'TOTAL',
-      'prop': 'PROP',
-      
+      moneyline: 'MONEYLINE',
+      spread: 'SPREAD',
+      total: 'TOTAL',
+      prop: 'PROP',
+
       // The Odds API
-      'h2h': 'MONEYLINE',
-      'spreads': 'SPREAD',
-      'totals': 'TOTAL',
+      h2h: 'MONEYLINE',
+      spreads: 'SPREAD',
+      totals: 'TOTAL',
     };
 
     return mappings[providerMarketType.toLowerCase()] || 'MONEYLINE';
@@ -85,4 +91,3 @@ export class CanonicalMappingService {
     return null;
   }
 }
-

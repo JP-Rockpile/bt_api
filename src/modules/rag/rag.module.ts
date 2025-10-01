@@ -9,4 +9,3 @@ import { VectorSearchService } from './services/vector-search.service';
   exports: [RagService, VectorSearchService],
 })
 export class RagModule {}
-

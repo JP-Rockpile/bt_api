@@ -53,17 +53,17 @@ import { QueuesModule } from './queues/queues.module';
               }
             : undefined,
         serializers: {
-          req: (req) => ({
+          req: (req: any) => ({
             id: req.id,
             method: req.method,
             url: req.url,
             userId: req.user?.userId,
           }),
-          res: (res) => ({
+          res: (res: any) => ({
             statusCode: res.statusCode,
           }),
         },
-        customProps: (req) => ({
+        customProps: (req: any) => ({
           requestId: req.id,
           userId: req.user?.userId,
         }),

@@ -17,13 +17,7 @@ import { BetsModule } from '@modules/bets/bets.module';
     OddsModule,
     BetsModule,
   ],
-  providers: [
-    QueueService,
-    OddsIngestionProcessor,
-    NotificationsProcessor,
-    AnalyticsProcessor,
-  ],
+  providers: [QueueService, OddsIngestionProcessor, NotificationsProcessor, AnalyticsProcessor],
   exports: [QueueService],
 })
 export class QueueModule {}
-

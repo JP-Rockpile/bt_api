@@ -13,7 +13,8 @@ export interface JwtPayload {
   azp?: string;
   scope?: string;
   permissions?: string[];
-  [key: string]: any;
+  email?: string;
+  [key: string]: unknown;
 }
 
 export interface RequestUser {
@@ -62,7 +63,7 @@ export class Auth0Strategy extends PassportStrategy(Strategy, 'jwt') {
       userId: payload.sub,
       auth0Sub: payload.sub,
       email: payload.email,
-      role: payload['https://betthink.com/role'] || 'USER',
+      role: (payload['https://betthink.com/role'] as string) || 'USER',
       permissions: payload.permissions || [],
     };
 
@@ -71,4 +72,3 @@ export class Auth0Strategy extends PassportStrategy(Strategy, 'jwt') {
     return user;
   }
 }
-

@@ -17,7 +17,7 @@ export class BetsService {
     // 1. Forward the query to the model service
     // 2. Model service uses LLM to analyze betting intent
     // 3. Return structured recommendation with reasoning
-    
+
     // For now, returning a placeholder response
     return {
       message: 'Bet planning endpoint - integrate with model service for LLM analysis',
@@ -115,7 +115,7 @@ export class BetsService {
     }
 
     // Generate deep link based on sportsbook template
-    const deepLink = this.buildDeepLink(bet);
+    const deepLink = this.buildDeepLink(bet as any);
 
     // Update bet with deep link and change status to GUIDED
     await this.prisma.bet.update({

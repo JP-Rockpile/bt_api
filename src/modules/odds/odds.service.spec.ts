@@ -8,8 +8,6 @@ import { TheOddsApiAdapter } from './adapters/theodds.adapter';
 
 describe('OddsService', () => {
   let service: OddsService;
-  let prisma: PrismaService;
-  let redis: RedisService;
 
   const mockPrismaService = {
     event: {
@@ -36,7 +34,7 @@ describe('OddsService', () => {
 
   const mockConfigService = {
     get: jest.fn((key: string) => {
-      const config = {
+      const config: Record<string, any> = {
         'cache.oddsTtl': 30,
       };
       return config[key];
@@ -64,8 +62,6 @@ describe('OddsService', () => {
     }).compile();
 
     service = module.get<OddsService>(OddsService);
-    prisma = module.get<PrismaService>(PrismaService);
-    redis = module.get<RedisService>(RedisService);
   });
 
   it('should be defined', () => {
@@ -144,7 +140,9 @@ describe('OddsService', () => {
     it('should throw NotFoundException if event not found', async () => {
       mockPrismaService.event.findUnique.mockResolvedValue(null);
 
-      await expect(service.getEventOdds('invalid_id')).rejects.toThrow('Event invalid_id not found');
+      await expect(service.getEventOdds('invalid_id')).rejects.toThrow(
+        'Event invalid_id not found',
+      );
     });
 
     it('should return event odds with best prices', async () => {
@@ -191,4 +189,3 @@ describe('OddsService', () => {
     });
   });
 });
-

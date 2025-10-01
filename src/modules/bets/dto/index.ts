@@ -29,7 +29,7 @@ export class PlanBetDto {
   @ApiPropertyOptional({ description: 'Additional context for LLM' })
   @IsOptional()
   @IsObject()
-  context?: any;
+  context?: Record<string, unknown>;
 }
 
 export class ConfirmBetDto {
@@ -41,7 +41,7 @@ export class ConfirmBetDto {
   @ApiPropertyOptional({ description: 'LLM recommendation from planning phase' })
   @IsOptional()
   @IsObject()
-  llmRecommendation?: any;
+  llmRecommendation?: Record<string, unknown>;
 
   @ApiPropertyOptional({ description: 'User notes' })
   @IsOptional()
@@ -53,7 +53,7 @@ export class GenerateDeepLinkDto {
   @ApiPropertyOptional({ description: 'Additional parameters for deep link' })
   @IsOptional()
   @IsObject()
-  parameters?: any;
+  parameters?: Record<string, unknown>;
 }
 
 export class UpdateBetStatusDto {
@@ -61,4 +61,3 @@ export class UpdateBetStatusDto {
   @IsEnum(BetStatus)
   status: BetStatus;
 }
-

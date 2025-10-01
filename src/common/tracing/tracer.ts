@@ -43,4 +43,3 @@ export function initTracing() {
 export function getTracer() {
   return sdk;
 }
-

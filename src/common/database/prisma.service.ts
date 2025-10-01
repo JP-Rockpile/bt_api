@@ -30,7 +30,7 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
     // Log slow queries in production
     if (process.env.NODE_ENV === 'production') {
       // @ts-expect-error - Prisma event types
-      this.$on('query', (e) => {
+      this.$on('query', (e: any) => {
         if (e.duration > 1000) {
           this.logger.warn(`Slow query detected: ${e.query} (${e.duration}ms)`);
         }
@@ -38,7 +38,7 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
     }
 
     // @ts-expect-error - Prisma event types
-    this.$on('error', (e) => {
+    this.$on('error', (e: any) => {
       this.logger.error(`Database error: ${e.message}`);
     });
   }
@@ -117,4 +117,3 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
     }));
   }
 }
-

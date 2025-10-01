@@ -67,10 +67,7 @@ export class BetsController {
   @ApiResponse({ status: 200, description: 'Deep link generated' })
   @ApiResponse({ status: 404, description: 'Bet not found' })
   @ApiResponse({ status: 400, description: 'Bet not in correct status' })
-  async generateDeepLink(
-    @CurrentUser('userId') userId: string,
-    @Param('betId') betId: string,
-  ) {
+  async generateDeepLink(@CurrentUser('userId') userId: string, @Param('betId') betId: string) {
     return this.betsService.generateDeepLink(userId, betId);
   }
 

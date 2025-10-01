@@ -43,4 +43,3 @@ export class GetEventsDto {
   @Min(0)
   offset?: number;
 }
-

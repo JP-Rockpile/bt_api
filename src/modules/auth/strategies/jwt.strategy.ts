@@ -35,7 +35,12 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     });
   }
 
-  async validate(payload: any) {
+  async validate(payload: {
+    sub: string;
+    email?: string;
+    permissions?: string[];
+    [key: string]: unknown;
+  }) {
     if (!payload || !payload.sub) {
       throw new UnauthorizedException('Invalid token payload');
     }
@@ -64,13 +69,13 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
         sub: payload.sub,
         email: payload.email,
         userId: user.id,
-        roles: payload['https://bet-think.com/roles'] || [],
+        roles: (payload['https://bet-think.com/roles'] as string[]) || [],
         permissions: payload.permissions || [],
       };
     } catch (error) {
-      this.logger.error(`Token validation error: ${error.message}`);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      this.logger.error(`Token validation error: ${errorMessage}`);
       throw new UnauthorizedException('Authentication failed');
     }
   }
 }
-

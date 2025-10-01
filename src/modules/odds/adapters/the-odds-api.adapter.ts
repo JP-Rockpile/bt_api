@@ -20,7 +20,7 @@ export class TheOddsApiAdapter {
     this.baseUrl = this.configService.get<string>('ODDS_API_BASE_URL');
   }
 
-  async fetchOdds(event: any): Promise<any[]> {
+  async fetchOdds(event: { id: string; sport: string }): Promise<Array<Record<string, unknown>>> {
     try {
       const externalId = event.externalIds?.odds_api;
       if (!externalId) {
@@ -49,7 +49,10 @@ export class TheOddsApiAdapter {
     }
   }
 
-  private normalizeOdds(event: any, rawOdds: any[]): any[] {
+  private normalizeOdds(
+    event: { id: string; sport: string },
+    rawOdds: Array<Record<string, unknown>>,
+  ): Array<Record<string, unknown>> {
     const normalized = [];
 
     for (const eventData of rawOdds) {
@@ -57,7 +60,7 @@ export class TheOddsApiAdapter {
 
       for (const bookmaker of eventData.bookmakers) {
         const sportsbookMapping = this.mappingService.mapSportsbook(bookmaker.key, 'odds_api');
-        
+
         if (!sportsbookMapping) {
           this.logger.warn(`No mapping found for sportsbook: ${bookmaker.key}`);
           continue;
@@ -65,7 +68,7 @@ export class TheOddsApiAdapter {
 
         for (const market of bookmaker.markets) {
           const marketType = this.mappingService.mapMarketType(market.key);
-          
+
           // Find matching market in database
           const dbMarket = event.markets.find((m) => m.marketType === marketType);
           if (!dbMarket) continue;
@@ -99,4 +102,3 @@ export class TheOddsApiAdapter {
     return outcome.trim();
   }
 }
-

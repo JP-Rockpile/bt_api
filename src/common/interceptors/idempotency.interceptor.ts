@@ -18,7 +18,7 @@ export class IdempotencyInterceptor implements NestInterceptor {
 
   constructor(private prisma: PrismaService) {}
 
-  async intercept(context: ExecutionContext, next: CallHandler): Promise<Observable<any>> {
+  async intercept(context: ExecutionContext, next: CallHandler): Promise<Observable<unknown>> {
     const request = context.switchToHttp().getRequest<Request>();
     const response = context.switchToHttp().getResponse<Response>();
 
@@ -95,14 +95,17 @@ export class IdempotencyInterceptor implements NestInterceptor {
   }
 
   private createRequestHash(request: Request): string {
+    interface RequestWithUser extends Request {
+      user?: { sub?: string };
+    }
+
     const data = JSON.stringify({
       method: request.method,
       url: request.url,
       body: request.body,
-      userId: (request as any).user?.sub,
+      userId: (request as RequestWithUser).user?.sub,
     });
 
     return createHash('sha256').update(data).digest('hex');
   }
 }
-

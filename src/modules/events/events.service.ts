@@ -130,7 +130,7 @@ export class EventsService {
     }
 
     return this.prisma.event.findMany({
-      where,
+      where: where as any,
       orderBy: { startTime: 'asc' },
       include: {
         markets: {

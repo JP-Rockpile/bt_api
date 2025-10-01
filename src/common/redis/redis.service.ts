@@ -91,7 +91,7 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
   /**
    * Cache with TTL
    */
-  async cacheSet(key: string, value: any, ttlSeconds: number): Promise<void> {
+  async cacheSet(key: string, value: unknown, ttlSeconds: number): Promise<void> {
     await this.client.setex(key, ttlSeconds, JSON.stringify(value));
   }
 
@@ -109,19 +109,15 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
    */
   async storeIdempotencyKey(
     key: string,
-    response: { statusCode: number; body: any },
+    response: { statusCode: number; body: unknown },
     ttlHours: number,
   ): Promise<void> {
-    await this.client.setex(
-      `idempotency:${key}`,
-      ttlHours * 3600,
-      JSON.stringify(response),
-    );
+    await this.client.setex(`idempotency:${key}`, ttlHours * 3600, JSON.stringify(response));
   }
 
   async getIdempotencyKey(key: string): Promise<{
     statusCode: number;
-    body: any;
+    body: unknown;
   } | null> {
     const value = await this.client.get(`idempotency:${key}`);
     return value ? JSON.parse(value) : null;
@@ -139,4 +135,3 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
     await this.client.del(`lock:${key}`);
   }
 }
-

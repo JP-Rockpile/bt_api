@@ -1,4 +1,14 @@
-import { Controller, Get, Post, Body, Param, Query, UseGuards, Sse, MessageEvent } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Param,
+  Query,
+  UseGuards,
+  Sse,
+  MessageEvent,
+} from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../../common/auth/guards/jwt-auth.guard';
 import { CurrentUser } from '../../common/auth/decorators/current-user.decorator';
@@ -49,8 +59,8 @@ export class ChatController {
       'Server-sent events stream for receiving LLM response chunks, system messages, and bet status updates',
   })
   streamChat(
-    @CurrentUser('userId') userId: string,
-    @Param('conversationId') conversationId: string,
+    @CurrentUser('userId') _userId: string,
+    @Param('conversationId') _conversationId: string,
   ): Observable<MessageEvent> {
     // This is a simplified example
     // In production, this would:

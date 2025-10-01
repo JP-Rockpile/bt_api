@@ -5,7 +5,7 @@ import { map, takeUntil } from 'rxjs/operators';
 interface StreamClient {
   userId: string;
   conversationId: string;
-  subject: Subject<any>;
+  subject: Subject<MessageEvent>;
   lastActivity: Date;
 }
 
@@ -21,13 +21,13 @@ export class SseService {
 
   createStream(userId: string, conversationId: string): Observable<MessageEvent> {
     const clientId = `${userId}:${conversationId}`;
-    
+
     // Close existing connection if any
     if (this.clients.has(clientId)) {
       this.closeStream(clientId);
     }
 
-    const subject = new Subject<any>();
+    const subject = new Subject<MessageEvent>();
     const client: StreamClient = {
       userId,
       conversationId,
@@ -88,7 +88,7 @@ export class SseService {
   /**
    * Send a message to a specific user's conversation stream
    */
-  sendToStream(userId: string, conversationId: string, data: any) {
+  sendToStream(userId: string, conversationId: string, data: Record<string, unknown>) {
     const clientId = `${userId}:${conversationId}`;
     const client = this.clients.get(clientId);
 
@@ -103,7 +103,12 @@ export class SseService {
   /**
    * Broadcast system message (e.g., odds update, bet status change)
    */
-  broadcastSystemMessage(userId: string, conversationId: string, message: string, metadata?: any) {
+  broadcastSystemMessage(
+    userId: string,
+    conversationId: string,
+    message: string,
+    metadata?: Record<string, unknown>,
+  ) {
     this.sendToStream(userId, conversationId, {
       type: 'system',
       message,
@@ -115,7 +120,12 @@ export class SseService {
   /**
    * Send streaming LLM response chunk
    */
-  sendLLMChunk(userId: string, conversationId: string, chunk: string, metadata?: any) {
+  sendLLMChunk(
+    userId: string,
+    conversationId: string,
+    chunk: string,
+    metadata?: Record<string, unknown>,
+  ) {
     this.sendToStream(userId, conversationId, {
       type: 'llm_chunk',
       content: chunk,
@@ -127,7 +137,12 @@ export class SseService {
   /**
    * Send LLM response completion
    */
-  sendLLMComplete(userId: string, conversationId: string, fullResponse: string, metadata?: any) {
+  sendLLMComplete(
+    userId: string,
+    conversationId: string,
+    fullResponse: string,
+    metadata?: Record<string, unknown>,
+  ) {
     this.sendToStream(userId, conversationId, {
       type: 'llm_complete',
       content: fullResponse,
@@ -157,4 +172,3 @@ export class SseService {
     }
   }
 }
-

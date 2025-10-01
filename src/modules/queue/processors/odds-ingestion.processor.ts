@@ -15,7 +15,7 @@ export class OddsIngestionProcessor extends WorkerHost {
     super();
   }
 
-  async process(job: Job<any>): Promise<any> {
+  async process(job: Job<{ sport?: string; league?: string; eventId?: string }>): Promise<unknown> {
     this.logger.log(`Processing job ${job.name} (ID: ${job.id})`);
 
     try {
@@ -39,7 +39,7 @@ export class OddsIngestionProcessor extends WorkerHost {
       return result;
     } catch (error) {
       this.logger.error(`Job failed: ${error.message}`, error.stack);
-      
+
       // Log job failure
       await this.logJob(job.id, 'odds-ingestion', job.name, 'FAILED', null, error.message);
       throw error;
@@ -84,7 +84,7 @@ export class OddsIngestionProcessor extends WorkerHost {
     queueName: string,
     jobType: string,
     status: string,
-    metadata?: any,
+    metadata?: Record<string, unknown>,
     error?: string,
   ) {
     try {
@@ -93,7 +93,7 @@ export class OddsIngestionProcessor extends WorkerHost {
           jobId,
           queueName,
           jobType,
-          status: status as any,
+          status,
           metadata,
           error,
           startedAt: status === 'ACTIVE' ? new Date() : undefined,
@@ -105,4 +105,3 @@ export class OddsIngestionProcessor extends WorkerHost {
     }
   }
 }
-

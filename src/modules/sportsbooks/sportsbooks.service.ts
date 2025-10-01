@@ -6,7 +6,7 @@ export class SportsbooksService {
   constructor(private prisma: PrismaService) {}
 
   async findAll(activeOnly: boolean = true) {
-    const where: any = {};
+    const where: { isActive?: boolean } = {};
 
     if (activeOnly) {
       where.isActive = true;
@@ -30,4 +30,3 @@ export class SportsbooksService {
     });
   }
 }
-
