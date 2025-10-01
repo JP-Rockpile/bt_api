@@ -76,7 +76,7 @@ export class BetsController {
   @ApiQuery({ name: 'status', required: false, description: 'Filter by bet status' })
   @ApiResponse({ status: 200, description: 'List of user bets' })
   async getUserBets(@CurrentUser('userId') userId: string, @Query('status') status?: string) {
-    return this.betsService.getUserBets(userId, status);
+    return this.betsService.getUserBets(userId, status as any);
   }
 
   @Get(':betId')
