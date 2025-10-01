@@ -25,7 +25,7 @@ export class AllExceptionsFilter implements ExceptionFilter {
   catch(exception: unknown, host: ArgumentsHost) {
     const ctx = host.switchToHttp();
     const response = ctx.getResponse<Response>();
-    const request = ctx.getRequest<Request>();
+    const request = ctx.getRequest<Request & { id?: string }>();
 
     let status = HttpStatus.INTERNAL_SERVER_ERROR;
     let message = 'Internal server error';
@@ -65,7 +65,7 @@ export class AllExceptionsFilter implements ExceptionFilter {
       errorCode,
       timestamp: new Date().toISOString(),
       path: request.url,
-      requestId: (request as any).id,
+      requestId: request.id,
     };
 
     // Log error details

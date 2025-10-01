@@ -19,7 +19,7 @@ export class IdempotencyInterceptor implements NestInterceptor {
   constructor(private prisma: PrismaService) {}
 
   async intercept(context: ExecutionContext, next: CallHandler): Promise<Observable<unknown>> {
-    const request = context.switchToHttp().getRequest<Request>();
+    const request = context.switchToHttp().getRequest<Request & { user?: { userId?: string } }>();
     const response = context.switchToHttp().getResponse<Response>();
 
     // Only apply to POST, PUT, PATCH
@@ -32,9 +32,6 @@ export class IdempotencyInterceptor implements NestInterceptor {
     if (!idempotencyKey) {
       return next.handle();
     }
-
-    // Create a hash of the request
-    const requestHash = this.createRequestHash(request);
 
     try {
       // Check if this idempotency key exists
@@ -70,21 +67,23 @@ export class IdempotencyInterceptor implements NestInterceptor {
                 statusCode: response.statusCode,
                 responseBody: JSON.stringify(data),
                 expiresAt,
-                userId: (request as any).user?.userId || 'anonymous',
+                userId: request.user?.userId || 'anonymous',
                 endpoint: request.url,
                 method: request.method,
               },
             });
-          } catch (error: any) {
-            this.logger.error(`Failed to store idempotency key: ${error.message}`);
+          } catch (error: unknown) {
+            const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+            this.logger.error(`Failed to store idempotency key: ${errorMessage}`);
           }
         }),
       );
-    } catch (error) {
+    } catch (error: unknown) {
       if (error instanceof ConflictException) {
         throw error;
       }
-      this.logger.error(`Idempotency check failed: ${error.message}`);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      this.logger.error(`Idempotency check failed: ${errorMessage}`);
       return next.handle();
     }
   }

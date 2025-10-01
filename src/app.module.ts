@@ -3,6 +3,7 @@ import { ConfigModule } from '@nestjs/config';
 import { LoggerModule } from 'nestjs-pino';
 import { ThrottlerModule } from '@nestjs/throttler';
 import { BullModule } from '@nestjs/bullmq';
+import { Request, Response } from 'express';
 
 // Configuration
 import { configuration } from './config/configuration';
@@ -53,17 +54,17 @@ import { QueuesModule } from './queues/queues.module';
               }
             : undefined,
         serializers: {
-          req: (req: any) => ({
+          req: (req: Request & { id?: string; user?: { userId?: string } }) => ({
             id: req.id,
             method: req.method,
             url: req.url,
             userId: req.user?.userId,
           }),
-          res: (res: any) => ({
+          res: (res: Response) => ({
             statusCode: res.statusCode,
           }),
         },
-        customProps: (req: any) => ({
+        customProps: (req: Request & { id?: string; user?: { userId?: string } }) => ({
           requestId: req.id,
           userId: req.user?.userId,
         }),

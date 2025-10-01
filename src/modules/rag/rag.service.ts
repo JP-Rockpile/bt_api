@@ -2,6 +2,7 @@ import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '@common/prisma/prisma.service';
 import { VectorSearchService } from './services/vector-search.service';
 import { CreateDocumentDto, CreateChunkDto } from './dto';
+import { Prisma } from '@prisma/client';
 
 @Injectable()
 export class RagService {
@@ -20,7 +21,7 @@ export class RagService {
         content: '', // Default empty content for now
         sourceUrl: createDto.sourceUrl,
         sourceType: createDto.source || 'user_uploaded',
-        metadata: createDto.metadata as any,
+        metadata: createDto.metadata as Prisma.InputJsonValue,
       },
     });
   }
@@ -41,7 +42,7 @@ export class RagService {
         documentId,
         content: createDto.content,
         chunkIndex: createDto.chunkIndex,
-        metadata: createDto.metadata as any,
+        metadata: createDto.metadata as Prisma.InputJsonValue,
       },
     });
   }

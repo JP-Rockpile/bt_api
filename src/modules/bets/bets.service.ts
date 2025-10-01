@@ -3,6 +3,15 @@ import { PrismaService } from '../../common/database/prisma.service';
 import { OddsUtils } from '../../common/utils/odds.utils';
 import { PlanBetDto } from './dto/plan-bet.dto';
 import { ConfirmBetDto } from './dto/confirm-bet.dto';
+import { Prisma } from '@prisma/client';
+
+type BetWithRelations = Prisma.BetGetPayload<{
+  include: {
+    event: true;
+    market: true;
+    sportsbook: true;
+  };
+}>;
 
 @Injectable()
 export class BetsService {
@@ -115,7 +124,7 @@ export class BetsService {
     }
 
     // Generate deep link based on sportsbook template
-    const deepLink = this.buildDeepLink(bet as any);
+    const deepLink = this.buildDeepLink(bet);
 
     // Update bet with deep link and change status to GUIDED
     await this.prisma.bet.update({
@@ -139,7 +148,7 @@ export class BetsService {
    * Get user's bet history
    */
   async getUserBets(userId: string, status?: string) {
-    const where: any = { userId };
+    const where: Prisma.BetWhereInput = { userId };
 
     if (status) {
       where.status = status;
@@ -202,7 +211,7 @@ export class BetsService {
   /**
    * Build deep link URL based on sportsbook configuration
    */
-  private buildDeepLink(bet: any): string {
+  private buildDeepLink(bet: BetWithRelations): string {
     const template = bet.sportsbook.deepLinkTemplate;
 
     if (!template) {

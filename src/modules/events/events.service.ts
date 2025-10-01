@@ -2,7 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../common/database/prisma.service';
 import { RedisService } from '../../common/redis/redis.service';
 import { ConfigService } from '@nestjs/config';
-import { EventStatus } from '@prisma/client';
+import { EventStatus, Prisma } from '@prisma/client';
 
 @Injectable()
 export class EventsService {
@@ -28,7 +28,7 @@ export class EventsService {
       return cached;
     }
 
-    const where: any = {};
+    const where: Prisma.EventWhereInput = {};
 
     if (filters?.sport) {
       where.sportType = filters.sport;
@@ -94,7 +94,7 @@ export class EventsService {
   }
 
   async getUpcoming(sport?: string, limit: number = 50) {
-    const where: any = {
+    const where: Prisma.EventWhereInput = {
       startTime: {
         gte: new Date(),
       },
@@ -121,7 +121,7 @@ export class EventsService {
   }
 
   async getLive(sport?: string) {
-    const where: any = {
+    const where: Prisma.EventWhereInput = {
       status: 'LIVE',
     };
 
@@ -130,7 +130,7 @@ export class EventsService {
     }
 
     return this.prisma.event.findMany({
-      where: where as any,
+      where,
       orderBy: { startTime: 'asc' },
       include: {
         markets: {

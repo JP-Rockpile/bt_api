@@ -34,7 +34,7 @@ describe('OddsService', () => {
 
   const mockConfigService = {
     get: jest.fn((key: string) => {
-      const config: Record<string, any> = {
+      const config: Record<string, number> = {
         'cache.oddsTtl': 30,
       };
       return config[key];

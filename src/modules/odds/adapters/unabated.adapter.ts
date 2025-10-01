@@ -164,7 +164,7 @@ export class UnabatedAdapter extends BaseOddsAdapter {
         );
 
         const markets: MarketOdds[] = [];
-        const eventMarkets = event.markets as any;
+        const eventMarkets = event.markets as Record<string, unknown>;
 
         // Process moneyline
         if (eventMarkets?.moneyline) {

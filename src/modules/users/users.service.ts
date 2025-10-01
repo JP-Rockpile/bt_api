@@ -1,5 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../common/database/prisma.service';
+import { Prisma } from '@prisma/client';
 
 @Injectable()
 export class UsersService {
@@ -56,7 +57,10 @@ export class UsersService {
   ) {
     return this.prisma.user.update({
       where: { id: userId },
-      data: updates as any,
+      data: {
+        preferences: updates.preferences as Prisma.InputJsonValue,
+        expoPushTokens: updates.deviceTokens,
+      },
     });
   }
 

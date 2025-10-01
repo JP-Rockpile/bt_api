@@ -69,7 +69,7 @@ export class NotificationsProcessor extends WorkerHost {
         to: token,
         sound: 'default',
         title: 'Bet Confirmed! 🎯',
-        body: `${bet?.selectedOutcome} at ${bet?.oddsAmerican! > 0 ? '+' : ''}${bet?.oddsAmerican} on ${bet?.sportsbook.displayName}`,
+        body: `${bet?.selectedOutcome} at ${bet?.oddsAmerican && bet.oddsAmerican > 0 ? '+' : ''}${bet?.oddsAmerican} on ${bet?.sportsbook.displayName}`,
         data: { betId: data.betId },
       }));
 

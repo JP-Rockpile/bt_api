@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../common/database/prisma.service';
-import { MessageRole } from '@prisma/client';
+import { MessageRole, Prisma } from '@prisma/client';
 
 @Injectable()
 export class ChatService {
@@ -30,7 +30,7 @@ export class ChatService {
         conversationId,
         role,
         content,
-        metadata: metadata as any,
+        metadata: metadata as Prisma.InputJsonValue,
       },
     });
   }

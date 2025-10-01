@@ -51,8 +51,7 @@ export class AnalyticsProcessor extends WorkerHost {
       users.map((user: { id: string }) => this.calculateUserROI(user.id)),
     );
 
-    const successful = results.filter((r: PromiseSettledResult<any>) => r.status === 'fulfilled')
-      .length;
+    const successful = results.filter((r) => r.status === 'fulfilled').length;
     return { total: users.length, successful };
   }
 
@@ -83,7 +82,7 @@ export class AnalyticsProcessor extends WorkerHost {
 
     // Store stats in user preferences
     const user = await this.prisma.user.findUnique({ where: { id: userId } });
-    const existingPrefs = (user?.preferences || {}) as Record<string, any>;
+    const existingPrefs = (user?.preferences || {}) as Record<string, unknown>;
 
     await this.prisma.user.update({
       where: { id: userId },

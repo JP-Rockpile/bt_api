@@ -10,7 +10,7 @@ export const validationSchema = Joi.object({
   API_VERSION: Joi.string().default('v1'),
 
   // Auth0 - Allow test values in test environment
-  AUTH0_DOMAIN: isTestEnvironment 
+  AUTH0_DOMAIN: isTestEnvironment
     ? Joi.string().default('test.auth0.com')
     : Joi.string().required(),
   AUTH0_AUDIENCE: isTestEnvironment

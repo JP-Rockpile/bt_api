@@ -68,7 +68,10 @@ export class TheOddsApiAdapter {
     for (const eventData of rawOdds) {
       if (!eventData.bookmakers) continue;
 
-      for (const bookmaker of eventData.bookmakers as any[]) {
+      for (const bookmaker of eventData.bookmakers as Array<{
+        key: string;
+        markets: Array<{ key: string; outcomes: Array<{ name: string; price: number }> }>;
+      }>) {
         const sportsbookMapping = this.mappingService.mapSportsbook(bookmaker.key, 'odds_api');
 
         if (!sportsbookMapping) {
@@ -76,11 +79,13 @@ export class TheOddsApiAdapter {
           continue;
         }
 
-        for (const market of bookmaker.markets as any[]) {
+        for (const market of bookmaker.markets) {
           const marketType = this.mappingService.mapMarketType(market.key);
 
           // Find matching market in database
-          const dbMarket = event.markets?.find((m: any) => m.marketType === marketType);
+          const dbMarket = event.markets?.find(
+            (m: { marketType: string }) => m.marketType === marketType,
+          );
           if (!dbMarket) continue;
 
           for (const outcome of market.outcomes) {

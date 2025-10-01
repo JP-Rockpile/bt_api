@@ -33,7 +33,12 @@ export class HealthController {
   @ApiResponse({ status: 200, description: 'Service is ready' })
   @ApiResponse({ status: 503, description: 'Service is not ready' })
   async readiness() {
-    const checks: any = {
+    const checks: {
+      database: boolean;
+      redis: boolean;
+      databaseError?: string;
+      redisError?: string;
+    } = {
       database: false,
       redis: false,
     };
@@ -42,18 +47,18 @@ export class HealthController {
     try {
       await this.prisma.$queryRaw`SELECT 1`;
       checks.database = true;
-    } catch (error: any) {
+    } catch (error: unknown) {
       checks.database = false;
-      checks.databaseError = error.message;
+      checks.databaseError = error instanceof Error ? error.message : 'Unknown error';
     }
 
     // Check Redis
     try {
       await this.redis.getClient().ping();
       checks.redis = true;
-    } catch (error: any) {
+    } catch (error: unknown) {
       checks.redis = false;
-      checks.redisError = error.message;
+      checks.redisError = error instanceof Error ? error.message : 'Unknown error';
     }
 
     const isReady = checks.database && checks.redis;

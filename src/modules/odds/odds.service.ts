@@ -298,8 +298,8 @@ export class OddsService {
             update: {},
             create: {
               eventId: event.id,
-              marketType: marketData.marketType as any,
-              parameters: marketData.parameters as any,
+              marketType: marketData.marketType,
+              parameters: marketData.parameters,
               marketKey,
             },
           });

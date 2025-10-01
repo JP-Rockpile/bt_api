@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../common/database/prisma.service';
+import { Prisma } from '@prisma/client';
 
 @Injectable()
 export class DocumentsService {
@@ -16,7 +17,7 @@ export class DocumentsService {
    * Get all active documents
    */
   async findAll(sourceType?: string) {
-    const where: any = { isActive: true };
+    const where: Prisma.DocumentWhereInput = { isActive: true };
 
     if (sourceType) {
       where.sourceType = sourceType;

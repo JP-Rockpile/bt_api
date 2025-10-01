@@ -41,7 +41,14 @@ export class OddsIngestionProcessor extends WorkerHost {
       this.logger.error(`Job failed: ${error.message}`, error.stack);
 
       // Log job failure
-      await this.logJob(job.id ?? 'unknown', 'odds-ingestion', job.name, 'FAILED', undefined, error.message);
+      await this.logJob(
+        job.id ?? 'unknown',
+        'odds-ingestion',
+        job.name,
+        'FAILED',
+        undefined,
+        error.message,
+      );
       throw error;
     }
   }
@@ -64,14 +71,11 @@ export class OddsIngestionProcessor extends WorkerHost {
     // TODO: Implement refreshOddsForEvent method in OddsService
     this.logger.warn('refreshOddsForEvent method not yet implemented');
     const results = await Promise.allSettled(
-      events.map((event: { id: string }) =>
-        Promise.resolve({ eventId: event.id, updated: false }),
-      ),
+      events.map((event: { id: string }) => Promise.resolve({ eventId: event.id, updated: false })),
     );
 
-    const successful = results.filter((r: PromiseSettledResult<any>) => r.status === 'fulfilled')
-      .length;
-    const failed = results.filter((r: PromiseSettledResult<any>) => r.status === 'rejected').length;
+    const successful = results.filter((r) => r.status === 'fulfilled').length;
+    const failed = results.filter((r) => r.status === 'rejected').length;
 
     return {
       total: events.length,
@@ -106,8 +110,9 @@ export class OddsIngestionProcessor extends WorkerHost {
           completedAt: ['COMPLETED', 'FAILED'].includes(status) ? new Date() : undefined,
         },
       });
-    } catch (err: any) {
-      this.logger.error(`Failed to log job: ${err.message}`);
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+      this.logger.error(`Failed to log job: ${errorMessage}`);
     }
   }
 }

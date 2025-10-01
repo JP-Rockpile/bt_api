@@ -2,6 +2,7 @@ import { Processor, WorkerHost, OnWorkerEvent } from '@nestjs/bullmq';
 import { Logger } from '@nestjs/common';
 import { Job } from 'bullmq';
 import { PrismaService } from '../../common/database/prisma.service';
+import { Prisma } from '@prisma/client';
 
 export interface AnalyticsJobData {
   userId: string;
@@ -61,7 +62,7 @@ export class AnalyticsProcessor extends WorkerHost {
   }
 
   private async calculateROI(userId: string, timeRange?: { startDate: string; endDate: string }) {
-    const where: any = {
+    const where: Prisma.BetWhereInput = {
       userId,
       status: 'SETTLED',
     };
@@ -100,7 +101,7 @@ export class AnalyticsProcessor extends WorkerHost {
     userId: string,
     timeRange?: { startDate: string; endDate: string },
   ) {
-    const where: any = {
+    const where: Prisma.BetWhereInput = {
       userId,
       status: { in: ['PLACED', 'SETTLED'] },
     };
@@ -119,7 +120,7 @@ export class AnalyticsProcessor extends WorkerHost {
           include: {
             oddsSnapshots: {
               where: {
-                outcome: { not: null as any },
+                outcome: { not: null },
               },
               orderBy: { timestamp: 'desc' },
               take: 1,
@@ -135,8 +136,9 @@ export class AnalyticsProcessor extends WorkerHost {
 
     for (const bet of bets) {
       const confirmedOdds = bet.oddsAmerican;
-      const closingSnapshot = (bet as any).market.oddsSnapshots.find(
-        (s: any) => s.outcome === bet.selectedOutcome && s.sportsbookId === bet.sportsbookId,
+      const closingSnapshot = bet.market.oddsSnapshots.find(
+        (s: { outcome: string | null; sportsbookId: string }) =>
+          s.outcome === bet.selectedOutcome && s.sportsbookId === bet.sportsbookId,
       );
 
       if (closingSnapshot) {
@@ -159,7 +161,7 @@ export class AnalyticsProcessor extends WorkerHost {
   }
 
   private async analyzeWinRate(userId: string, timeRange?: { startDate: string; endDate: string }) {
-    const where: any = {
+    const where: Prisma.BetWhereInput = {
       userId,
       status: 'SETTLED',
     };
@@ -198,9 +200,9 @@ export class AnalyticsProcessor extends WorkerHost {
     const pushes = bets.filter((bet) => bet.result === 'PUSH').length;
 
     // Segment by sport
-    const bySport: Record<string, any> = {};
+    const bySport: Record<string, { total: number; wins: number; losses: number }> = {};
     for (const bet of bets) {
-      const sport = (bet as any).event.sportType;
+      const sport = bet.event.sportType;
       if (!bySport[sport]) {
         bySport[sport] = { total: 0, wins: 0, losses: 0 };
       }

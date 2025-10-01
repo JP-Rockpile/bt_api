@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '@common/prisma/prisma.service';
+import { Sportsbook } from '@prisma/client';
 
 @Injectable()
 export class CanonicalMappingService {
@@ -15,16 +16,16 @@ export class CanonicalMappingService {
 
   private async loadSportsbookMappings() {
     const sportsbooks = await this.prisma.sportsbook.findMany();
-    sportsbooks.forEach((book: any) => {
+    sportsbooks.forEach((book: Sportsbook) => {
       // Use key as fallback for providerKey if not available
-      const providerKey = (book as any).providerKey || book.key;
+      const providerKey = book.key;
       if (providerKey) {
         this.sportsbookCache.set(providerKey, {
           id: book.id,
           name: book.name,
           key: book.key,
           providerKey,
-        } as any);
+        });
       }
     });
     this.logger.log(`Loaded ${sportsbooks.length} sportsbook mappings`);

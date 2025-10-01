@@ -5,7 +5,7 @@ import {
   Logger,
   INestApplication,
 } from '@nestjs/common';
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient, Prisma } from '@prisma/client';
 import { ConfigService } from '@nestjs/config';
 
 @Injectable()
@@ -29,16 +29,14 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
 
     // Log slow queries in production
     if (process.env.NODE_ENV === 'production') {
-      // @ts-expect-error - Prisma event types
-      this.$on('query', (e: any) => {
+      this.$on('query', (e: Prisma.QueryEvent) => {
         if (e.duration > 1000) {
           this.logger.warn(`Slow query detected: ${e.query} (${e.duration}ms)`);
         }
       });
     }
 
-    // @ts-expect-error - Prisma event types
-    this.$on('error', (e: any) => {
+    this.$on('error', (e: Prisma.LogEvent) => {
       this.logger.error(`Database error: ${e.message}`);
     });
   }
