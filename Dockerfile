@@ -1,12 +1,17 @@
 # Multi-stage build for optimized production image
 
 # Stage 1: Builder
-FROM node:20-alpine AS builder
+FROM node:20-slim AS builder
 
 WORKDIR /app
 
-# Install build dependencies
-RUN apk add --no-cache python3 make g++
+# Install build dependencies including OpenSSL
+RUN apt-get update && apt-get install -y \
+    openssl \
+    python3 \
+    make \
+    g++ \
+    && rm -rf /var/lib/apt/lists/*
 
 # Copy package files
 COPY package*.json ./
@@ -28,16 +33,19 @@ RUN npm run build
 RUN npm prune --production
 
 # Stage 2: Production
-FROM node:20-alpine
+FROM node:20-slim
 
 WORKDIR /app
 
-# Install runtime dependencies
-RUN apk add --no-cache dumb-init
+# Install runtime dependencies including OpenSSL
+RUN apt-get update && apt-get install -y \
+    openssl \
+    dumb-init \
+    && rm -rf /var/lib/apt/lists/*
 
 # Create non-root user
-RUN addgroup -g 1001 -S nodejs && \
-    adduser -S nestjs -u 1001
+RUN groupadd -g 1001 nodejs && \
+    useradd -u 1001 -g nodejs -s /bin/bash -m nestjs
 
 # Copy built application from builder
 COPY --from=builder --chown=nestjs:nodejs /app/dist ./dist

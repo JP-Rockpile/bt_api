@@ -36,7 +36,7 @@ async function bootstrap() {
   app.setGlobalPrefix(apiPrefix);
   app.enableVersioning({
     type: VersioningType.URI,
-    defaultVersion: process.env.API_VERSION || 'v1',
+    defaultVersion: process.env.API_VERSION || '1',
   });
 
   // Global validation pipe

@@ -7,7 +7,7 @@ export const validationSchema = Joi.object({
   NODE_ENV: Joi.string().valid('development', 'production', 'test').default('development'),
   PORT: Joi.number().default(3000),
   API_PREFIX: Joi.string().default('api'),
-  API_VERSION: Joi.string().default('v1'),
+  API_VERSION: Joi.string().default('1'),
 
   // Auth0 - Allow test values in test environment
   AUTH0_DOMAIN: isTestEnvironment
