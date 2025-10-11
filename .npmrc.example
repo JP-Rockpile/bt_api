@@ -1,0 +1,9 @@
+@jp-rockpile:registry=https://npm.pkg.github.com
+//npm.pkg.github.com/:_authToken=${NODE_AUTH_TOKEN}
+
+# To use this file:
+# 1. Copy to .npmrc: cp .npmrc.example .npmrc
+# 2. Replace ${NODE_AUTH_TOKEN} with your GitHub Personal Access Token
+# 3. Your token needs 'read:packages' scope
+# 4. Never commit .npmrc to git (it's in .gitignore)
+
