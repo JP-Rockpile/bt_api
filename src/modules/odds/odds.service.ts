@@ -4,9 +4,15 @@ import { RedisService } from '../../common/redis/redis.service';
 import { ConfigService } from '@nestjs/config';
 import { UnabatedAdapter } from './adapters/unabated.adapter';
 import { TheOddsApiAdapter } from './adapters/theodds.adapter';
-import { OddsUtils } from '../../common/utils/odds.utils';
 import { OddsData } from './adapters/base-odds.adapter';
 import { MarketType, Prisma } from '@prisma/client';
+import {
+  calculateVigPercentage,
+  isLowVigMarket,
+  type Odds,
+  type BestOdds,
+} from '@betthink/shared';
+import { OddsUtils } from '../../common/utils/odds.utils';
 
 @Injectable()
 export class OddsService {

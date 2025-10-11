@@ -1,9 +1,15 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, Logger } from '@nestjs/common';
 import { PrismaService } from '../../common/database/prisma.service';
-import { OddsUtils } from '../../common/utils/odds.utils';
 import { PlanBetDto } from './dto/plan-bet.dto';
 import { ConfirmBetDto } from './dto/confirm-bet.dto';
 import { Prisma, BetStatus } from '@prisma/client';
+import { 
+  americanToDecimal,
+  calculateExpectedValue,
+  calculatePayout,
+  type Odds 
+} from '@betthink/shared';
+import { DeepLinkService } from './services/deep-link.service';
 
 type BetWithRelations = Prisma.BetGetPayload<{
   include: {
@@ -15,7 +21,12 @@ type BetWithRelations = Prisma.BetGetPayload<{
 
 @Injectable()
 export class BetsService {
-  constructor(private prisma: PrismaService) {}
+  private readonly logger = new Logger(BetsService.name);
+
+  constructor(
+    private prisma: PrismaService,
+    private deepLinkService: DeepLinkService,
+  ) {}
 
   /**
    * Plan a bet - LLM will analyze intent and return recommendation
@@ -71,10 +82,20 @@ export class BetsService {
       throw new BadRequestException('Invalid or inactive sportsbook');
     }
 
-    // Calculate decimal odds
-    const oddsDecimal = OddsUtils.americanToDecimal(confirmBetDto.oddsAmerican);
+    // Calculate decimal odds using shared utility
+    const oddsDecimal = americanToDecimal(confirmBetDto.oddsAmerican);
+
+    // Calculate potential payout using shared utility
+    const odds: Odds = {
+      american: confirmBetDto.oddsAmerican,
+      decimal: oddsDecimal,
+      fractional: '', // Not needed for payout calculation
+      impliedProbability: 0, // Not needed for payout calculation
+    };
+    const { profit, totalPayout } = calculatePayout(odds, confirmBetDto.stake);
 
     // Create bet record
+    // Note: Store notes/llmRecommendation in metadata field once schema is updated
     const bet = await this.prisma.bet.create({
       data: {
         userId,
@@ -95,11 +116,17 @@ export class BetsService {
       },
     });
 
+    this.logger.log(
+      `Bet confirmed: ${bet.id} - $${bet.stake} at ${bet.oddsAmerican} odds. ` +
+      `Potential profit: $${profit.toFixed(2)}, payout: $${totalPayout.toFixed(2)}`
+    );
+
     return bet;
   }
 
   /**
    * Generate deep link for placing bet at sportsbook
+   * Uses shared package deep linking utilities
    */
   async generateDeepLink(userId: string, betId: string) {
     const bet = await this.prisma.bet.findUnique({
@@ -123,8 +150,22 @@ export class BetsService {
       throw new BadRequestException('Bet must be confirmed before generating deep link');
     }
 
-    // Generate deep link based on sportsbook template
-    const deepLink = this.buildDeepLink(bet);
+    // Generate deep link using shared package utilities via DeepLinkService
+    const deepLink = this.deepLinkService.generateDeepLink(bet as any);
+
+    if (!deepLink) {
+      this.logger.warn(`Failed to generate deep link for bet ${betId}`);
+      // Fall back to web link
+      const webLink = this.deepLinkService.generateWebLink(bet as any);
+      
+      return {
+        betId: bet.id,
+        deepLink: webLink,
+        sportsbook: bet.sportsbook.displayName,
+        instructions: `Visit ${bet.sportsbook.displayName} to place your bet`,
+        isWebFallback: true,
+      };
+    }
 
     // Update bet with deep link and change status to GUIDED
     await this.prisma.bet.update({
@@ -141,6 +182,7 @@ export class BetsService {
       deepLink,
       sportsbook: bet.sportsbook.displayName,
       instructions: `Open this link in your mobile browser to be guided to ${bet.sportsbook.displayName}`,
+      isWebFallback: false,
     };
   }
 
@@ -209,23 +251,37 @@ export class BetsService {
   }
 
   /**
-   * Build deep link URL based on sportsbook configuration
+   * Calculate expected value for a bet
+   * Uses shared package EV calculation
    */
-  private buildDeepLink(bet: BetWithRelations): string {
-    const template = bet.sportsbook.deepLinkTemplate;
+  async calculateBetEV(
+    betId: string, 
+    trueProbability: number
+  ): Promise<{ ev: number; evPercentage: number }> {
+    const bet = await this.prisma.bet.findUnique({
+      where: { id: betId },
+    });
 
-    if (!template) {
-      // Fallback to web URL
-      return bet.sportsbook.webUrl || `https://${bet.sportsbook.key}.com`;
+    if (!bet) {
+      throw new NotFoundException('Bet not found');
     }
 
-    // Replace template variables
-    return template
-      .replace('{sport}', bet.event.sportType.toLowerCase())
-      .replace('{league}', bet.event.league.toLowerCase())
-      .replace('{home}', encodeURIComponent(bet.event.homeTeam))
-      .replace('{away}', encodeURIComponent(bet.event.awayTeam))
-      .replace('{market}', bet.market.marketType.toLowerCase())
-      .replace('{outcome}', bet.selectedOutcome);
+    // Convert Prisma Decimal to number
+    const decimalOdds = typeof bet.oddsDecimal === 'number' 
+      ? bet.oddsDecimal 
+      : Number(bet.oddsDecimal);
+    
+    const stake = typeof bet.stake === 'number'
+      ? bet.stake
+      : Number(bet.stake);
+
+    const odds: Odds = {
+      american: bet.oddsAmerican,
+      decimal: decimalOdds,
+      fractional: '', // Not needed for EV
+      impliedProbability: 0, // Will be calculated
+    };
+
+    return calculateExpectedValue(odds, trueProbability, stake);
   }
 }

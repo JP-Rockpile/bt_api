@@ -1,10 +1,13 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../../common/database/prisma.service';
-import { MessageRole, Prisma } from '@prisma/client';
+import { MessageRole as PrismaMessageRole, Prisma } from '@prisma/client';
 import { createId } from '@paralleldrive/cuid2';
+import { MessageRole } from '@betthink/shared';
 
 @Injectable()
 export class ChatService {
+  private readonly logger = new Logger(ChatService.name);
+
   constructor(private prisma: PrismaService) {}
 
   async createConversation(
@@ -45,15 +48,20 @@ export class ChatService {
   async createMessage(
     userId: string,
     conversationId: string,
-    role: MessageRole,
+    role: MessageRole | PrismaMessageRole,
     content: string,
     metadata?: Record<string, unknown>,
   ) {
+    // Convert shared MessageRole to Prisma MessageRole if needed
+    const prismaRole = typeof role === 'string' ? role as PrismaMessageRole : role;
+
+    this.logger.log(`Creating message in conversation ${conversationId} with role ${prismaRole}`);
+
     return this.prisma.message.create({
       data: {
         userId,
         conversationId,
-        role,
+        role: prismaRole,
         content,
         metadata: metadata as Prisma.InputJsonValue,
       },

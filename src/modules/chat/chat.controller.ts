@@ -13,16 +13,19 @@ import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagg
 import { JwtAuthGuard } from '../../common/auth/guards/jwt-auth.guard';
 import { CurrentUser } from '../../common/auth/decorators/current-user.decorator';
 import { ChatService } from './chat.service';
+import { SseService } from './services/sse.service';
 import { CreateConversationDto } from './dto';
-import { Observable, interval } from 'rxjs';
-import { map } from 'rxjs/operators';
+import { Observable } from 'rxjs';
 
 @ApiTags('chat')
 @Controller('chat')
 @UseGuards(JwtAuthGuard)
 @ApiBearerAuth('auth0-jwt')
 export class ChatController {
-  constructor(private chatService: ChatService) {}
+  constructor(
+    private chatService: ChatService,
+    private sseService: SseService,
+  ) {}
 
   @Post('conversations')
   @ApiOperation({ summary: 'Create a new conversation' })
@@ -52,9 +55,14 @@ export class ChatController {
   async getHistory(
     @CurrentUser('id') userId: string,
     @Param('conversationId') conversationId: string,
-    @Query('limit') limit?: number,
+    @Query('limit') limitParam?: string,
   ) {
-    return this.chatService.getConversationHistory(userId, conversationId, limit);
+    const limit = limitParam ? parseInt(limitParam, 10) : 50;
+    return this.chatService.getConversationHistory(
+      userId,
+      conversationId,
+      limit,
+    );
   }
 
   @Post('conversations/:conversationId/messages')
@@ -75,25 +83,15 @@ export class ChatController {
       'Server-sent events stream for receiving LLM response chunks, system messages, and bet status updates',
   })
   streamChat(
-    @CurrentUser('id') _userId: string,
-    @Param('conversationId') _conversationId: string,
+    @CurrentUser('id') userId: string,
+    @Param('conversationId') conversationId: string,
   ): Observable<MessageEvent> {
-    // This is a simplified example
-    // In production, this would:
-    // 1. Establish connection to model service
-    // 2. Stream LLM chunks
-    // 3. Inject system messages (odds updates, bet status)
-    // 4. Handle heartbeats and reconnection
-
-    // For demonstration, sending heartbeat every 30 seconds
-    return interval(30000).pipe(
-      map((counter) => ({
-        data: JSON.stringify({
-          type: 'heartbeat',
-          timestamp: new Date().toISOString(),
-          counter,
-        }),
-      })),
-    );
+    // Create and return the SSE stream for this user's conversation
+    // This handles:
+    // 1. Connection establishment with heartbeats
+    // 2. LLM response streaming
+    // 3. System messages (odds updates, bet status)
+    // 4. Automatic cleanup on disconnect
+    return this.sseService.createStream(userId, conversationId);
   }
 }

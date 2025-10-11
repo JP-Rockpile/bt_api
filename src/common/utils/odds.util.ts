@@ -1,69 +1,55 @@
 /**
- * Odds conversion utilities
+ * Odds conversion utilities - Re-exported from @betthink/shared
+ * 
+ * This file re-exports utilities from the shared package for backward compatibility
+ * and adds any API-specific utilities that don't belong in the shared package.
  */
 
 import * as crypto from 'crypto';
 
-/**
- * Convert American odds to decimal
- */
-export function americanToDecimal(american: number): number {
-  if (american > 0) {
-    return Number((american / 100 + 1).toFixed(4));
-  } else {
-    return Number((100 / Math.abs(american) + 1).toFixed(4));
-  }
-}
-
-/**
- * Convert decimal odds to American
- */
-export function decimalToAmerican(decimal: number): number {
-  if (decimal >= 2.0) {
-    return Math.round((decimal - 1) * 100);
-  } else {
-    return Math.round(-100 / (decimal - 1));
-  }
-}
-
-/**
- * Calculate implied probability from American odds
- */
-export function impliedProbability(american: number): number {
-  if (american > 0) {
-    return Number((100 / (american + 100)).toFixed(4));
-  } else {
-    return Number((Math.abs(american) / (Math.abs(american) + 100)).toFixed(4));
-  }
-}
+// Re-export odds conversion utilities from shared package
+export {
+  americanToDecimal,
+  decimalToAmerican,
+  americanToImpliedProbability as impliedProbability,
+  calculateClosingLineValue,
+  calculateExpectedValue,
+  calculateClosingLineValue as calculateCLV,
+} from '@betthink/shared';
 
 /**
  * Calculate juice/vig from two-way market odds
+ * Note: This wraps the shared package's vig calculation utilities
  */
 export function calculateJuice(side1American: number, side2American: number): number {
-  const prob1 = impliedProbability(side1American);
-  const prob2 = impliedProbability(side2American);
-  return Number(((prob1 + prob2 - 1) * 100).toFixed(2));
+  // Import the function locally to avoid circular dependencies
+  const { calculateTwoWayMargin } = require('@betthink/shared');
+  const result = calculateTwoWayMargin(
+    { american: side1American } as any,
+    { american: side2American } as any
+  );
+  return result.marginPercentage;
 }
 
 /**
  * Calculate expected value (EV) percentage
+ * This is a convenience wrapper around the shared package's calculateExpectedValue
  */
 export function calculateEV(odds: number, trueProbability: number): number {
-  const decimal = americanToDecimal(odds);
-  return Number(((trueProbability * decimal - 1) * 100).toFixed(2));
-}
-
-/**
- * Calculate Closing Line Value (CLV)
- * @param betOdds - The odds when the bet was placed
- * @param closingOdds - The odds when the line closed
- * @returns CLV as a percentage
- */
-export function calculateCLV(betOdds: number, closingOdds: number): number {
-  const betDecimal = americanToDecimal(betOdds);
-  const closingDecimal = americanToDecimal(closingOdds);
-  return Number((((betDecimal - closingDecimal) / closingDecimal) * 100).toFixed(2));
+  const { 
+    americanToDecimal: _americanToDecimal,
+    calculateExpectedValue, 
+    americanToFractional, 
+    americanToImpliedProbability 
+  } = require('@betthink/shared');
+  const oddsObj = {
+    american: odds,
+    decimal: _americanToDecimal(odds),
+    fractional: americanToFractional(odds),
+    impliedProbability: americanToImpliedProbability(odds),
+  };
+  const result = calculateExpectedValue(oddsObj, trueProbability, 100);
+  return result.evPercentage;
 }
 
 /**
@@ -75,6 +61,7 @@ export function isPositiveEV(odds: number, trueProbability: number): boolean {
 
 /**
  * Find best odds from multiple sportsbooks
+ * API-specific utility - doesn't belong in shared package
  */
 export function findBestOdds(oddsArray: Array<{ sportsbook: string; odds: number }>): {
   sportsbook: string;
@@ -99,6 +86,7 @@ export function findBestOdds(oddsArray: Array<{ sportsbook: string; odds: number
 
 /**
  * Create a hash for deduplication
+ * API-specific utility for database operations
  */
 export function createSnapshotHash(
   marketId: string,

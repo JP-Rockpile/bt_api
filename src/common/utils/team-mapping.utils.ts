@@ -1,17 +1,25 @@
 /**
  * Team name normalization and fuzzy matching utilities
+ * Uses bt_shared canonicalization where applicable
  */
+
+import {
+  normalizeString,
+  canonicalizeTeamName,
+  canonicalizeLeagueName,
+  fuzzyMatchTeam,
+} from '@betthink/shared';
+
+// Re-export shared utilities
+export { normalizeString, canonicalizeTeamName, canonicalizeLeagueName, fuzzyMatchTeam };
 
 export class TeamMappingUtils {
   /**
    * Normalize team name for comparison
+   * @deprecated Use normalizeString from bt_shared instead
    */
   static normalize(teamName: string): string {
-    return teamName
-      .toLowerCase()
-      .trim()
-      .replace(/[^a-z0-9\s]/g, '')
-      .replace(/\s+/g, ' ');
+    return normalizeString(teamName);
   }
 
   /**
