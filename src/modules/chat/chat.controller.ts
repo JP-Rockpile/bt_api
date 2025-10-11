@@ -13,6 +13,7 @@ import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagg
 import { JwtAuthGuard } from '../../common/auth/guards/jwt-auth.guard';
 import { CurrentUser } from '../../common/auth/decorators/current-user.decorator';
 import { ChatService } from './chat.service';
+import { CreateConversationDto } from './dto';
 import { Observable, interval } from 'rxjs';
 import { map } from 'rxjs/operators';
 
@@ -23,10 +24,25 @@ import { map } from 'rxjs/operators';
 export class ChatController {
   constructor(private chatService: ChatService) {}
 
+  @Post('conversations')
+  @ApiOperation({ summary: 'Create a new conversation' })
+  @ApiResponse({ status: 201, description: 'Conversation created successfully' })
+  async createConversation(
+    @CurrentUser('id') userId: string,
+    @Body() createConversationDto: CreateConversationDto,
+  ) {
+    return this.chatService.createConversation(
+      userId,
+      createConversationDto.title,
+      createConversationDto.initialMessage,
+      createConversationDto.metadata,
+    );
+  }
+
   @Get('conversations')
   @ApiOperation({ summary: 'Get user conversations' })
   @ApiResponse({ status: 200, description: 'List of conversations' })
-  async getConversations(@CurrentUser('userId') userId: string) {
+  async getConversations(@CurrentUser('id') userId: string) {
     return this.chatService.getUserConversations(userId);
   }
 
@@ -34,7 +50,7 @@ export class ChatController {
   @ApiOperation({ summary: 'Get conversation message history' })
   @ApiResponse({ status: 200, description: 'Conversation messages' })
   async getHistory(
-    @CurrentUser('userId') userId: string,
+    @CurrentUser('id') userId: string,
     @Param('conversationId') conversationId: string,
     @Query('limit') limit?: number,
   ) {
@@ -45,7 +61,7 @@ export class ChatController {
   @ApiOperation({ summary: 'Send a message' })
   @ApiResponse({ status: 201, description: 'Message created' })
   async sendMessage(
-    @CurrentUser('userId') userId: string,
+    @CurrentUser('id') userId: string,
     @Param('conversationId') conversationId: string,
     @Body('content') content: string,
   ) {
@@ -59,7 +75,7 @@ export class ChatController {
       'Server-sent events stream for receiving LLM response chunks, system messages, and bet status updates',
   })
   streamChat(
-    @CurrentUser('userId') _userId: string,
+    @CurrentUser('id') _userId: string,
     @Param('conversationId') _conversationId: string,
   ): Observable<MessageEvent> {
     // This is a simplified example

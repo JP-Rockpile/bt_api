@@ -38,7 +38,7 @@ export class BetsController {
       'Phase 1 of bet workflow: User expresses betting intent, LLM provides structured recommendation with reasoning',
   })
   @ApiResponse({ status: 200, description: 'Bet recommendation from LLM' })
-  async planBet(@CurrentUser('userId') userId: string, @Body() planBetDto: PlanBetDto) {
+  async planBet(@CurrentUser('id') userId: string, @Body() planBetDto: PlanBetDto) {
     return this.betsService.planBet(userId, planBetDto);
   }
 
@@ -53,7 +53,7 @@ export class BetsController {
   @ApiResponse({ status: 201, description: 'Bet confirmed and locked in' })
   @ApiResponse({ status: 404, description: 'Event, market, or sportsbook not found' })
   @ApiResponse({ status: 400, description: 'Invalid bet parameters' })
-  async confirmBet(@CurrentUser('userId') userId: string, @Body() confirmBetDto: ConfirmBetDto) {
+  async confirmBet(@CurrentUser('id') userId: string, @Body() confirmBetDto: ConfirmBetDto) {
     return this.betsService.confirmBet(userId, confirmBetDto);
   }
 
@@ -67,7 +67,7 @@ export class BetsController {
   @ApiResponse({ status: 200, description: 'Deep link generated' })
   @ApiResponse({ status: 404, description: 'Bet not found' })
   @ApiResponse({ status: 400, description: 'Bet not in correct status' })
-  async generateDeepLink(@CurrentUser('userId') userId: string, @Param('betId') betId: string) {
+  async generateDeepLink(@CurrentUser('id') userId: string, @Param('betId') betId: string) {
     return this.betsService.generateDeepLink(userId, betId);
   }
 
@@ -75,7 +75,7 @@ export class BetsController {
   @ApiOperation({ summary: 'Get user bet history' })
   @ApiQuery({ name: 'status', required: false, description: 'Filter by bet status' })
   @ApiResponse({ status: 200, description: 'List of user bets' })
-  async getUserBets(@CurrentUser('userId') userId: string, @Query('status') status?: string) {
+  async getUserBets(@CurrentUser('id') userId: string, @Query('status') status?: string) {
     return this.betsService.getUserBets(userId, status as any);
   }
 
@@ -83,7 +83,7 @@ export class BetsController {
   @ApiOperation({ summary: 'Get bet details' })
   @ApiResponse({ status: 200, description: 'Bet details' })
   @ApiResponse({ status: 404, description: 'Bet not found' })
-  async getBet(@CurrentUser('userId') userId: string, @Param('betId') betId: string) {
+  async getBet(@CurrentUser('id') userId: string, @Param('betId') betId: string) {
     return this.betsService.getBet(userId, betId);
   }
 }

@@ -34,13 +34,21 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
   }
 
   async onModuleInit() {
-    await this.client.ping();
-    this.logger.log('Redis client initialized successfully');
+    try {
+      await this.client.ping();
+      this.logger.log('Redis client initialized successfully');
+    } catch (error) {
+      this.logger.warn('Redis connection failed - running in degraded mode', error);
+    }
   }
 
   async onModuleDestroy() {
-    await this.client.quit();
-    this.logger.log('Redis client disconnected');
+    try {
+      await this.client.quit();
+      this.logger.log('Redis client disconnected');
+    } catch (error) {
+      this.logger.warn('Redis disconnection failed', error);
+    }
   }
 
   getClient(): Redis {

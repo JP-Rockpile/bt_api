@@ -14,7 +14,7 @@ export class UsersController {
   @Get('me')
   @ApiOperation({ summary: 'Get current user profile' })
   @ApiResponse({ status: 200, description: 'User profile with sportsbook links' })
-  async getProfile(@CurrentUser('userId') userId: string) {
+  async getProfile(@CurrentUser('id') userId: string) {
     return this.usersService.findOne(userId);
   }
 
@@ -22,7 +22,7 @@ export class UsersController {
   @ApiOperation({ summary: 'Update user profile' })
   @ApiResponse({ status: 200, description: 'Updated user profile' })
   async updateProfile(
-    @CurrentUser('userId') userId: string,
+    @CurrentUser('id') userId: string,
     @Body() updates: { preferences?: Record<string, unknown>; deviceTokens?: string[] },
   ) {
     return this.usersService.updateProfile(userId, updates);
@@ -32,7 +32,7 @@ export class UsersController {
   @ApiOperation({ summary: 'Link a sportsbook to user account' })
   @ApiResponse({ status: 201, description: 'Sportsbook linked' })
   async linkSportsbook(
-    @CurrentUser('userId') userId: string,
+    @CurrentUser('id') userId: string,
     @Param('sportsbookId') sportsbookId: string,
     @Body('preferenceOrder') preferenceOrder?: number,
   ) {
@@ -43,7 +43,7 @@ export class UsersController {
   @ApiOperation({ summary: 'Unlink a sportsbook from user account' })
   @ApiResponse({ status: 200, description: 'Sportsbook unlinked' })
   async unlinkSportsbook(
-    @CurrentUser('userId') userId: string,
+    @CurrentUser('id') userId: string,
     @Param('sportsbookId') sportsbookId: string,
   ) {
     await this.usersService.unlinkSportsbook(userId, sportsbookId);
@@ -53,7 +53,7 @@ export class UsersController {
   @Post('me/push-token')
   @ApiOperation({ summary: 'Register Expo push notification token' })
   @ApiResponse({ status: 200, description: 'Push token registered' })
-  async updatePushToken(@CurrentUser('userId') userId: string, @Body('token') token: string) {
+  async updatePushToken(@CurrentUser('id') userId: string, @Body('token') token: string) {
     return this.usersService.updatePushToken(userId, token);
   }
 }

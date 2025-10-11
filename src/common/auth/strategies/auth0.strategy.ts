@@ -3,6 +3,7 @@ import { PassportStrategy } from '@nestjs/passport';
 import { ConfigService } from '@nestjs/config';
 import { Strategy, ExtractJwt } from 'passport-jwt';
 import { passportJwtSecret } from 'jwks-rsa';
+import { UsersService } from '../../../modules/users/users.service';
 
 export interface JwtPayload {
   sub: string; // Auth0 user ID
@@ -18,7 +19,8 @@ export interface JwtPayload {
 }
 
 export interface RequestUser {
-  userId: string; // Auth0 sub
+  id: string; // Prisma User ID (CUID)
+  userId: string; // Auth0 sub (kept for backward compatibility)
   auth0Sub: string;
   email?: string;
   role?: string;
@@ -29,7 +31,10 @@ export interface RequestUser {
 export class Auth0Strategy extends PassportStrategy(Strategy, 'jwt') {
   private readonly logger = new Logger(Auth0Strategy.name);
 
-  constructor(private configService: ConfigService) {
+  constructor(
+    private configService: ConfigService,
+    private usersService: UsersService,
+  ) {
     const auth0Domain = configService.get<string>('auth0.domain');
     const auth0Audience = configService.get<string>('auth0.audience');
     const auth0Issuer = configService.get<string>('auth0.issuer');
@@ -58,16 +63,23 @@ export class Auth0Strategy extends PassportStrategy(Strategy, 'jwt') {
       throw new UnauthorizedException('Invalid token payload');
     }
 
-    // Extract user information from JWT
+    // Find or create user in database
+    const dbUser = await this.usersService.findOrCreate(
+      payload.sub,
+      payload.email,
+    );
+
+    // Extract user information from JWT and database
     const user: RequestUser = {
-      userId: payload.sub,
+      id: dbUser.id, // Prisma User ID
+      userId: payload.sub, // Auth0 sub (backward compatibility)
       auth0Sub: payload.sub,
-      email: payload.email,
-      role: (payload['https://betthink.com/role'] as string) || 'USER',
+      email: payload.email || dbUser.email || undefined,
+      role: (payload['https://betthink.com/role'] as string) || dbUser.role || 'USER',
       permissions: payload.permissions || [],
     };
 
-    this.logger.debug(`User authenticated: ${user.userId}`);
+    this.logger.debug(`User authenticated: ${user.auth0Sub} (DB ID: ${user.id})`);
 
     return user;
   }

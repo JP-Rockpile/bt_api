@@ -1,10 +1,35 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../common/database/prisma.service';
 import { MessageRole, Prisma } from '@prisma/client';
+import { createId } from '@paralleldrive/cuid2';
 
 @Injectable()
 export class ChatService {
   constructor(private prisma: PrismaService) {}
+
+  async createConversation(
+    userId: string,
+    title?: string,
+    initialMessage?: string,
+    metadata?: Record<string, unknown>,
+  ) {
+    const conversationId = createId();
+
+    // If an initial message is provided, create it
+    if (initialMessage) {
+      await this.createMessage(userId, conversationId, 'USER', initialMessage, {
+        title,
+        ...metadata,
+      });
+    }
+
+    return {
+      conversationId,
+      title,
+      createdAt: new Date().toISOString(),
+      metadata,
+    };
+  }
 
   async getConversationHistory(userId: string, conversationId: string, limit: number = 50) {
     return this.prisma.message.findMany({

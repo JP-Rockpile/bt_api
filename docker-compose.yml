@@ -60,6 +60,9 @@ services:
       UNABATED_API_KEY: ${UNABATED_API_KEY}
       THE_ODDS_API_KEY: ${THE_ODDS_API_KEY}
       EXPO_ACCESS_TOKEN: ${EXPO_ACCESS_TOKEN}
+      # CORS Configuration
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:19006}
+      CORS_CREDENTIALS: ${CORS_CREDENTIALS:-true}
       # Logging
       LOG_LEVEL: debug
       LOG_PRETTY_PRINT: "true"

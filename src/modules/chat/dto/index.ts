@@ -2,6 +2,23 @@ import { IsString, IsOptional, IsObject, IsEnum, IsInt, Min, Max } from 'class-v
 import { Type } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
+export class CreateConversationDto {
+  @ApiPropertyOptional({ description: 'Optional title for the conversation' })
+  @IsOptional()
+  @IsString()
+  title?: string;
+
+  @ApiPropertyOptional({ description: 'Optional initial message content' })
+  @IsOptional()
+  @IsString()
+  initialMessage?: string;
+
+  @ApiPropertyOptional({ description: 'Additional metadata' })
+  @IsOptional()
+  @IsObject()
+  metadata?: Record<string, unknown>;
+}
+
 export class CreateMessageDto {
   @ApiProperty({ description: 'Conversation ID' })
   @IsString()
