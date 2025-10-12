@@ -3,21 +3,13 @@ import { PrismaService } from '../../common/database/prisma.service';
 import { PlanBetDto } from './dto/plan-bet.dto';
 import { ConfirmBetDto } from './dto/confirm-bet.dto';
 import { Prisma, BetStatus } from '@prisma/client';
-import { 
+import {
   americanToDecimal,
   calculateExpectedValue,
   calculatePayout,
-  type Odds 
+  type Odds,
 } from '@betthink/shared';
 import { DeepLinkService } from './services/deep-link.service';
-
-type BetWithRelations = Prisma.BetGetPayload<{
-  include: {
-    event: true;
-    market: true;
-    sportsbook: true;
-  };
-}>;
 
 @Injectable()
 export class BetsService {
@@ -118,7 +110,7 @@ export class BetsService {
 
     this.logger.log(
       `Bet confirmed: ${bet.id} - $${bet.stake} at ${bet.oddsAmerican} odds. ` +
-      `Potential profit: $${profit.toFixed(2)}, payout: $${totalPayout.toFixed(2)}`
+        `Potential profit: $${profit.toFixed(2)}, payout: $${totalPayout.toFixed(2)}`,
     );
 
     return bet;
@@ -151,13 +143,13 @@ export class BetsService {
     }
 
     // Generate deep link using shared package utilities via DeepLinkService
-    const deepLink = this.deepLinkService.generateDeepLink(bet as any);
+    const deepLink = this.deepLinkService.generateDeepLink(bet);
 
     if (!deepLink) {
       this.logger.warn(`Failed to generate deep link for bet ${betId}`);
       // Fall back to web link
-      const webLink = this.deepLinkService.generateWebLink(bet as any);
-      
+      const webLink = this.deepLinkService.generateWebLink(bet);
+
       return {
         betId: bet.id,
         deepLink: webLink,
@@ -255,8 +247,8 @@ export class BetsService {
    * Uses shared package EV calculation
    */
   async calculateBetEV(
-    betId: string, 
-    trueProbability: number
+    betId: string,
+    trueProbability: number,
   ): Promise<{ ev: number; evPercentage: number }> {
     const bet = await this.prisma.bet.findUnique({
       where: { id: betId },
@@ -267,13 +259,10 @@ export class BetsService {
     }
 
     // Convert Prisma Decimal to number
-    const decimalOdds = typeof bet.oddsDecimal === 'number' 
-      ? bet.oddsDecimal 
-      : Number(bet.oddsDecimal);
-    
-    const stake = typeof bet.stake === 'number'
-      ? bet.stake
-      : Number(bet.stake);
+    const decimalOdds =
+      typeof bet.oddsDecimal === 'number' ? bet.oddsDecimal : Number(bet.oddsDecimal);
+
+    const stake = typeof bet.stake === 'number' ? bet.stake : Number(bet.stake);
 
     const odds: Odds = {
       american: bet.oddsAmerican,

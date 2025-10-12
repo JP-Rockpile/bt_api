@@ -4,6 +4,12 @@ import { Job } from 'bullmq';
 import { PrismaService } from '@common/prisma/prisma.service';
 import { BetsService } from '@modules/bets/bets.service';
 import { calculateCLV } from '@common/utils/odds.util';
+import {
+  americanToDecimal,
+  americanToFractional,
+  americanToImpliedProbability,
+  type Odds,
+} from '@betthink/shared';
 
 @Processor('analytics')
 export class AnalyticsProcessor extends WorkerHost {
@@ -126,26 +132,20 @@ export class AnalyticsProcessor extends WorkerHost {
 
     if (closingOdds) {
       // Convert American odds to Odds objects for bt_shared
-      const { 
-        americanToDecimal,
-        americanToFractional,
-        americanToImpliedProbability 
-      } = require('@betthink/shared');
-      
-      const betOdds = {
+      const betOdds: Odds = {
         american: bet.oddsAmerican,
         decimal: americanToDecimal(bet.oddsAmerican),
         fractional: americanToFractional(bet.oddsAmerican),
         impliedProbability: americanToImpliedProbability(bet.oddsAmerican),
       };
-      
-      const closingOddsObj = {
+
+      const closingOddsObj: Odds = {
         american: closingOdds.oddsAmerican,
         decimal: americanToDecimal(closingOdds.oddsAmerican),
         fractional: americanToFractional(closingOdds.oddsAmerican),
         impliedProbability: americanToImpliedProbability(closingOdds.oddsAmerican),
       };
-      
+
       const clvResult = calculateCLV(betOdds, closingOddsObj);
       const clvPercentage = clvResult.clvPercentage;
 

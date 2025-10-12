@@ -53,7 +53,7 @@ export class ChatService {
     metadata?: Record<string, unknown>,
   ) {
     // Convert shared MessageRole to Prisma MessageRole if needed
-    const prismaRole = typeof role === 'string' ? role as PrismaMessageRole : role;
+    const prismaRole = typeof role === 'string' ? (role as PrismaMessageRole) : role;
 
     this.logger.log(`Creating message in conversation ${conversationId} with role ${prismaRole}`);
 

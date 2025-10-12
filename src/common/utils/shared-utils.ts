@@ -1,9 +1,9 @@
 /**
  * Central re-export of shared utilities for use across the API
- * 
+ *
  * This file provides a single import point for all shared utilities,
  * organized by category for easy discovery.
- * 
+ *
  * Updated for @betthink/shared v0.2.0
  */
 
@@ -116,41 +116,27 @@ export {
 // ============================================================================
 // STRING UTILITIES (v0.2.0)
 // ============================================================================
-export {
-  truncate,
-  capitalize,
-} from '@betthink/shared';
+export { truncate, capitalize } from '@betthink/shared';
 
 // ============================================================================
 // VALIDATION UTILITIES (v0.2.0)
 // ============================================================================
-export {
-  isValidEmail,
-  isValidUUID,
-} from '@betthink/shared';
+export { isValidEmail, isValidUUID } from '@betthink/shared';
 
 // ============================================================================
 // DATE/TIME UTILITIES (v0.2.0)
 // ============================================================================
-export {
-  formatRelativeTime,
-} from '@betthink/shared';
+export { formatRelativeTime } from '@betthink/shared';
 
 // ============================================================================
 // ASYNC/RETRY UTILITIES (v0.2.0)
 // ============================================================================
-export {
-  sleep,
-  exponentialBackoff,
-} from '@betthink/shared';
+export { sleep, exponentialBackoff } from '@betthink/shared';
 
 // ============================================================================
 // PLATFORM DETECTION (v0.2.0)
 // ============================================================================
-export {
-  isIOS,
-  isAndroid,
-} from '@betthink/shared';
+export { isIOS, isAndroid } from '@betthink/shared';
 
 // ============================================================================
 // ERROR HANDLING
@@ -171,4 +157,3 @@ export {
   formatErrorResponse,
   sanitizeError, // v0.2.0 - Safe error extraction
 } from '@betthink/shared';
-

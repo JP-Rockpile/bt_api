@@ -1,6 +1,6 @@
 /**
  * @betthink/shared Package - Usage Examples
- * 
+ *
  * This file contains real-world examples of using the shared package
  * throughout the BetThink API. These examples demonstrate best practices
  * and common patterns.
@@ -9,15 +9,11 @@
 import {
   // Types
   type Odds,
-  type Market,
   type Bet,
-  type User,
-  type RiskSettings,
-  
+
   // Enums
   MarketType,
-  BetStatus,
-  
+
   // Odds Utilities
   americanToDecimal,
   calculateExpectedValue,
@@ -26,19 +22,18 @@ import {
   calculateVigPercentage,
   isLowVigMarket,
   removeVigProportional,
-  
+
   // Team Mapping
   canonicalizeTeamName,
   fuzzyMatchTeam,
-  
+
   // Deep Linking
   buildDeepLink,
   supportsDeepLinking,
-  
+
   // Error Handling
   ValidationError,
   NotFoundError,
-  isAppError,
 } from '@betthink/shared';
 
 // ============================================================================
@@ -83,7 +78,7 @@ export function calculateBetPayout(americanOdds: number, stake: number) {
 export function analyzeEV(
   americanOdds: number,
   userEstimatedWinProbability: number, // 0-1
-  stake: number = 100
+  stake: number = 100,
 ) {
   const odds: Odds = {
     american: americanOdds,
@@ -92,23 +87,17 @@ export function analyzeEV(
     impliedProbability: 0,
   };
 
-  const { ev, evPercentage } = calculateExpectedValue(
-    odds,
-    userEstimatedWinProbability,
-    stake
-  );
+  const { ev, evPercentage } = calculateExpectedValue(odds, userEstimatedWinProbability, stake);
 
   return {
     odds: americanOdds,
     bookmakerImpliedProb: 1 / odds.decimal,
     userEstimatedProb: userEstimatedWinProbability,
-    edge: userEstimatedWinProbability - (1 / odds.decimal),
+    edge: userEstimatedWinProbability - 1 / odds.decimal,
     ev,
     evPercentage,
     isPositiveEV: evPercentage > 0,
-    recommendation: evPercentage > 5 ? 'STRONG BET' : 
-                   evPercentage > 0 ? 'SLIGHT EDGE' : 
-                   'AVOID',
+    recommendation: evPercentage > 5 ? 'STRONG BET' : evPercentage > 0 ? 'SLIGHT EDGE' : 'AVOID',
   };
 }
 
@@ -129,7 +118,7 @@ export function calculateOptimalStake(
   americanOdds: number,
   userWinProbability: number,
   bankroll: number,
-  kellyFraction: number = 0.25 // Use quarter Kelly by default (conservative)
+  kellyFraction: number = 0.25, // Use quarter Kelly by default (conservative)
 ) {
   const odds: Odds = {
     american: americanOdds,
@@ -138,12 +127,7 @@ export function calculateOptimalStake(
     impliedProbability: 0,
   };
 
-  const kelly = calculateKellyCriterion(
-    odds,
-    userWinProbability,
-    bankroll,
-    kellyFraction
-  );
+  const kelly = calculateKellyCriterion(odds, userWinProbability, bankroll, kellyFraction);
 
   return {
     fullKellyStake: kelly.fullKellyStake,
@@ -167,7 +151,7 @@ export function calculateOptimalStake(
  */
 export function analyzeMarketVig(americanOdds: number[]) {
   // Convert all odds
-  const oddsArray: Odds[] = americanOdds.map(american => ({
+  const oddsArray: Odds[] = americanOdds.map((american) => ({
     american,
     decimal: americanToDecimal(american),
     fractional: '',
@@ -182,12 +166,13 @@ export function analyzeMarketVig(americanOdds: number[]) {
   const fairProbabilities = removeVigProportional(oddsArray);
 
   // Calculate fair odds (no vig)
-  const fairOdds = fairProbabilities.map(prob => {
+  const fairOdds = fairProbabilities.map((prob) => {
     const fairDecimal = 1 / prob;
     // Convert back to American
-    const fairAmerican = fairDecimal >= 2.0
-      ? Math.round((fairDecimal - 1) * 100)
-      : Math.round(-100 / (fairDecimal - 1));
+    const fairAmerican =
+      fairDecimal >= 2.0
+        ? Math.round((fairDecimal - 1) * 100)
+        : Math.round(-100 / (fairDecimal - 1));
     return { prob, american: fairAmerican, decimal: fairDecimal };
   });
 
@@ -256,7 +241,7 @@ export function generateBetDeepLink(
   marketType: MarketType,
   selection: string,
   odds: number,
-  stake: number
+  stake: number,
 ) {
   // Check if sportsbook supports deep linking
   if (!supportsDeepLinking(sportsbookId)) {
@@ -323,14 +308,8 @@ export function analyzeBettingOpportunity(params: {
   kellyFraction: number;
   stake?: number;
 }) {
-  const {
-    americanOdds,
-    userWinProbability,
-    bankroll,
-    maxBetPercentage,
-    kellyFraction,
-    stake,
-  } = params;
+  const { americanOdds, userWinProbability, bankroll, maxBetPercentage, kellyFraction, stake } =
+    params;
 
   // Convert odds
   const odds: Odds = {
@@ -344,12 +323,7 @@ export function analyzeBettingOpportunity(params: {
   const evAnalysis = calculateExpectedValue(odds, userWinProbability, 100);
 
   // Calculate Kelly stake
-  const kellyStake = calculateKellyCriterion(
-    odds,
-    userWinProbability,
-    bankroll,
-    kellyFraction
-  );
+  const kellyStake = calculateKellyCriterion(odds, userWinProbability, bankroll, kellyFraction);
 
   // Apply risk limits
   const maxAllowedStake = (bankroll * maxBetPercentage) / 100;
@@ -372,7 +346,7 @@ export function analyzeBettingOpportunity(params: {
       ev: evAnalysis.ev,
       evPercentage: evAnalysis.evPercentage,
       isPositiveEV: evAnalysis.evPercentage > 0,
-      edge: userWinProbability - (1 / odds.decimal),
+      edge: userWinProbability - 1 / odds.decimal,
     },
 
     // Stake sizing
@@ -400,10 +374,10 @@ export function analyzeBettingOpportunity(params: {
         evAnalysis.evPercentage > 5
           ? 'HIGH'
           : evAnalysis.evPercentage > 2
-          ? 'MEDIUM'
-          : evAnalysis.evPercentage > 0
-          ? 'LOW'
-          : 'AVOID',
+            ? 'MEDIUM'
+            : evAnalysis.evPercentage > 0
+              ? 'LOW'
+              : 'AVOID',
       reasoning: generateReasoning(evAnalysis.evPercentage, kellyStake.warning),
     },
   };
@@ -453,7 +427,7 @@ console.log(`Reasoning: ${analysis.recommendation.reasoning}`);
  */
 export async function validateBetRequest(betId: string, userId: string): Promise<Bet> {
   // Simulate database lookup
-  const bet: Bet | null = null as any; // Replace with: await prisma.bet.findUnique(...)
+  const bet: Bet | null = null as unknown as Bet; // Replace with: await prisma.bet.findUnique(...)
 
   if (!bet) {
     throw new NotFoundError('Bet', betId);
@@ -504,4 +478,3 @@ export const examples = {
   analyzeBettingOpportunity,
   validateBetRequest,
 };
-

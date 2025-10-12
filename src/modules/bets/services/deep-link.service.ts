@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { buildDeepLink, supportsDeepLinking } from '@betthink/shared';
 import type { MarketType } from '@betthink/shared';
+import type { Prisma } from '@prisma/client';
 
 // Define DeepLinkParams locally since it's not exported from main index
 interface DeepLinkParams {
@@ -15,18 +16,18 @@ interface DeepLinkParams {
 interface BetWithRelations {
   sportsbook: {
     name: string;
-    providerKey: string;
-    deepLinkTemplate?: string;
+    key: string; // Prisma uses 'key', not 'providerKey'
+    deepLinkTemplate?: string | null;
   };
   event: {
-    externalIds?: Record<string, string>;
+    externalIds?: Prisma.JsonValue;
   };
   market: {
     marketType: string;
   };
   selectedOutcome: string;
-  americanOdds: number;
-  stake: number;
+  oddsAmerican: number;
+  stake: number | { toNumber(): number };
 }
 
 @Injectable()
@@ -38,27 +39,30 @@ export class DeepLinkService {
    */
   generateDeepLink(bet: BetWithRelations): string | null {
     const sportsbook = bet.sportsbook;
-    const sportsbookId = sportsbook.providerKey.toLowerCase();
+    const sportsbookId = sportsbook.key.toLowerCase();
 
     try {
       // Get the event ID for this sportsbook
-      const eventId = bet.event.externalIds?.[sportsbook.providerKey];
+      const externalIds = bet.event.externalIds as Record<string, unknown> | null | undefined;
+      const eventId = externalIds?.[sportsbook.key] as string | undefined;
 
       // Check if the shared package supports this sportsbook
       if (supportsDeepLinking(sportsbookId)) {
+        const stake = typeof bet.stake === 'number' ? bet.stake : bet.stake.toNumber();
+
         const params: DeepLinkParams = {
           eventId,
           marketType: bet.market.marketType as MarketType,
           selection: bet.selectedOutcome,
-          odds: bet.americanOdds,
-          stake: bet.stake,
+          odds: bet.oddsAmerican,
+          stake,
         };
 
         const result = buildDeepLink(sportsbookId, params);
-        
+
         if (result) {
           this.logger.log(
-            `Generated deep link for ${sportsbook.name} (${result.scheme}): ${result.url}`
+            `Generated deep link for ${sportsbook.name} (${result.scheme}): ${result.url}`,
           );
           if (result.notes) {
             this.logger.debug(`Deep link notes: ${result.notes}`);
@@ -85,23 +89,23 @@ export class DeepLinkService {
    */
   private generateLegacyDeepLink(bet: BetWithRelations): string | null {
     const sportsbook = bet.sportsbook;
-    
+
     if (!sportsbook.deepLinkTemplate) {
       return null;
     }
 
     try {
       let deepLink = sportsbook.deepLinkTemplate;
+      const externalIds = bet.event.externalIds as Record<string, unknown> | null | undefined;
+      const eventId = (externalIds?.[sportsbook.key] as string | undefined) || '';
+      const stake = typeof bet.stake === 'number' ? bet.stake : bet.stake.toNumber();
 
       // Replace template variables
-      deepLink = deepLink.replace(
-        '{eventId}',
-        bet.event.externalIds?.[sportsbook.providerKey] || '',
-      );
+      deepLink = deepLink.replace('{eventId}', eventId);
       deepLink = deepLink.replace('{marketType}', bet.market.marketType.toLowerCase());
       deepLink = deepLink.replace('{outcome}', encodeURIComponent(bet.selectedOutcome));
-      deepLink = deepLink.replace('{odds}', bet.americanOdds.toString());
-      deepLink = deepLink.replace('{stake}', bet.stake.toString());
+      deepLink = deepLink.replace('{odds}', bet.oddsAmerican.toString());
+      deepLink = deepLink.replace('{stake}', stake.toString());
 
       this.logger.log(`Generated legacy deep link for ${sportsbook.name}: ${deepLink}`);
       return deepLink;
@@ -116,7 +120,7 @@ export class DeepLinkService {
    */
   generateWebLink(bet: BetWithRelations): string {
     const sportsbook = bet.sportsbook;
-    const sportsbookId = sportsbook.providerKey.toLowerCase();
+    const sportsbookId = sportsbook.key.toLowerCase();
 
     // Try to use the shared package's web domain
     if (supportsDeepLinking(sportsbookId)) {

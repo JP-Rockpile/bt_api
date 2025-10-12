@@ -7,33 +7,33 @@ import { Type } from 'class-transformer';
  * This gets sent to the LLM for analysis and recommendation
  */
 export class PlanBetDto {
-  @ApiProperty({ 
-    description: 'User betting intent/query in natural language', 
-    example: 'Bet $50 on Lakers moneyline against the Warriors tonight' 
+  @ApiProperty({
+    description: 'User betting intent/query in natural language',
+    example: 'Bet $50 on Lakers moneyline against the Warriors tonight',
   })
   @IsString()
   @IsNotEmpty()
   query: string;
 
-  @ApiPropertyOptional({ 
+  @ApiPropertyOptional({
     description: 'Market ID if user wants to bet on a specific market',
-    example: 'cm123abc456def789'
+    example: 'cm123abc456def789',
   })
   @IsOptional()
   @IsString()
   marketId?: string;
 
-  @ApiPropertyOptional({ 
+  @ApiPropertyOptional({
     description: 'Preferred sportsbook ID',
-    example: 'draftkings'
+    example: 'draftkings',
   })
   @IsOptional()
   @IsString()
   sportsbookId?: string;
 
-  @ApiPropertyOptional({ 
+  @ApiPropertyOptional({
     description: 'Stake amount user wants to bet (optional in planning)',
-    example: 50
+    example: 50,
   })
   @IsOptional()
   @IsNumber()
@@ -41,7 +41,7 @@ export class PlanBetDto {
   @Min(0)
   stake?: number;
 
-  @ApiPropertyOptional({ 
+  @ApiPropertyOptional({
     description: 'Additional context for the LLM (previous messages, user preferences, etc.)',
   })
   @IsOptional()

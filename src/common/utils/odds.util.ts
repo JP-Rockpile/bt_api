@@ -1,6 +1,6 @@
 /**
  * Odds conversion utilities - Re-exported from @betthink/shared
- * 
+ *
  * This file re-exports utilities from the shared package for backward compatibility
  * and adds any API-specific utilities that don't belong in the shared package.
  */
@@ -17,16 +17,24 @@ export {
   calculateClosingLineValue as calculateCLV,
 } from '@betthink/shared';
 
+// Import for local use
+import {
+  calculateTwoWayMargin,
+  americanToDecimal as _americanToDecimal,
+  americanToFractional,
+  americanToImpliedProbability,
+  calculateExpectedValue as _calculateExpectedValue,
+  type Odds,
+} from '@betthink/shared';
+
 /**
  * Calculate juice/vig from two-way market odds
  * Note: This wraps the shared package's vig calculation utilities
  */
 export function calculateJuice(side1American: number, side2American: number): number {
-  // Import the function locally to avoid circular dependencies
-  const { calculateTwoWayMargin } = require('@betthink/shared');
   const result = calculateTwoWayMargin(
-    { american: side1American } as any,
-    { american: side2American } as any
+    { american: side1American, decimal: 0, fractional: '', impliedProbability: 0 } as Odds,
+    { american: side2American, decimal: 0, fractional: '', impliedProbability: 0 } as Odds,
   );
   return result.marginPercentage;
 }
@@ -36,19 +44,13 @@ export function calculateJuice(side1American: number, side2American: number): nu
  * This is a convenience wrapper around the shared package's calculateExpectedValue
  */
 export function calculateEV(odds: number, trueProbability: number): number {
-  const { 
-    americanToDecimal: _americanToDecimal,
-    calculateExpectedValue, 
-    americanToFractional, 
-    americanToImpliedProbability 
-  } = require('@betthink/shared');
-  const oddsObj = {
+  const oddsObj: Odds = {
     american: odds,
     decimal: _americanToDecimal(odds),
     fractional: americanToFractional(odds),
     impliedProbability: americanToImpliedProbability(odds),
   };
-  const result = calculateExpectedValue(oddsObj, trueProbability, 100);
+  const result = _calculateExpectedValue(oddsObj, trueProbability, 100);
   return result.evPercentage;
 }
 

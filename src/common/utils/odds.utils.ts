@@ -1,6 +1,6 @@
 /**
  * Odds conversion utilities - Re-exported from @betthink/shared
- * 
+ *
  * This file wraps utilities from the shared package in a class-based API
  * for backward compatibility with existing code that uses OddsUtils.method()
  */
@@ -53,8 +53,8 @@ export class OddsUtils {
    */
   static calculateJuice(side1American: number, side2American: number): number {
     const result = calculateTwoWayMargin(
-      { american: side1American } as any,
-      { american: side2American } as any
+      { american: side1American, decimal: 0, fractional: '', impliedProbability: 0 } as Odds,
+      { american: side2American, decimal: 0, fractional: '', impliedProbability: 0 } as Odds,
     );
     return result.marginPercentage;
   }

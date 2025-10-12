@@ -22,6 +22,7 @@ import { CurrentUser } from '../../common/auth/decorators/current-user.decorator
 import { BetsService } from './bets.service';
 import { PlanBetDto } from './dto/plan-bet.dto';
 import { ConfirmBetDto } from './dto/confirm-bet.dto';
+import { BetStatus } from '@prisma/client';
 
 @ApiTags('bets')
 @Controller('bets')
@@ -76,7 +77,7 @@ export class BetsController {
   @ApiQuery({ name: 'status', required: false, description: 'Filter by bet status' })
   @ApiResponse({ status: 200, description: 'List of user bets' })
   async getUserBets(@CurrentUser('id') userId: string, @Query('status') status?: string) {
-    return this.betsService.getUserBets(userId, status as any);
+    return this.betsService.getUserBets(userId, status as BetStatus | undefined);
   }
 
   @Get(':betId')

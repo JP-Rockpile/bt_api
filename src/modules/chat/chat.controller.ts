@@ -58,11 +58,7 @@ export class ChatController {
     @Query('limit') limitParam?: string,
   ) {
     const limit = limitParam ? parseInt(limitParam, 10) : 50;
-    return this.chatService.getConversationHistory(
-      userId,
-      conversationId,
-      limit,
-    );
+    return this.chatService.getConversationHistory(userId, conversationId, limit);
   }
 
   @Post('conversations/:conversationId/messages')

@@ -1,12 +1,12 @@
-import { 
-  IsString, 
-  IsOptional, 
-  IsObject, 
-  IsEnum, 
-  IsInt, 
-  Min, 
+import {
+  IsString,
+  IsOptional,
+  IsObject,
+  IsEnum,
+  IsInt,
+  Min,
   Max,
-  IsNotEmpty 
+  IsNotEmpty,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
@@ -17,24 +17,24 @@ import { MessageRole, MessageIntent } from '@betthink/shared';
  * Maps to shared Conversation type
  */
 export class CreateConversationDto {
-  @ApiPropertyOptional({ 
+  @ApiPropertyOptional({
     description: 'Optional title for the conversation',
-    example: 'Lakers vs Warriors Betting Strategy' 
+    example: 'Lakers vs Warriors Betting Strategy',
   })
   @IsOptional()
   @IsString()
   title?: string;
 
-  @ApiPropertyOptional({ 
+  @ApiPropertyOptional({
     description: 'Optional initial message content to start the conversation',
-    example: 'Should I bet on the Lakers tonight?' 
+    example: 'Should I bet on the Lakers tonight?',
   })
   @IsOptional()
   @IsString()
   initialMessage?: string;
 
-  @ApiPropertyOptional({ 
-    description: 'Additional metadata (e.g., related event, sport, etc.)' 
+  @ApiPropertyOptional({
+    description: 'Additional metadata (e.g., related event, sport, etc.)',
   })
   @IsOptional()
   @IsObject()
@@ -46,49 +46,49 @@ export class CreateConversationDto {
  * Maps to shared Message type
  */
 export class CreateMessageDto {
-  @ApiProperty({ 
+  @ApiProperty({
     description: 'Conversation ID',
-    example: 'cm123abc456def789'
+    example: 'cm123abc456def789',
   })
   @IsString()
   @IsNotEmpty()
   conversationId: string;
 
-  @ApiProperty({ 
+  @ApiProperty({
     description: 'Message role - who is sending this message',
     enum: MessageRole,
-    example: 'USER'
+    example: 'USER',
   })
   @IsEnum(MessageRole)
   role: MessageRole;
 
-  @ApiProperty({ 
+  @ApiProperty({
     description: 'Message content',
-    example: 'What are the best odds for Lakers moneyline?'
+    example: 'What are the best odds for Lakers moneyline?',
   })
   @IsString()
   @IsNotEmpty()
   content: string;
 
-  @ApiPropertyOptional({ 
+  @ApiPropertyOptional({
     description: 'Token count for tracking usage',
-    example: 150
+    example: 150,
   })
   @IsOptional()
   @IsInt()
   @Min(0)
   tokenCount?: number;
 
-  @ApiPropertyOptional({ 
+  @ApiPropertyOptional({
     description: 'Message intent for classification',
-    enum: MessageIntent
+    enum: MessageIntent,
   })
   @IsOptional()
   @IsEnum(MessageIntent)
   intent?: MessageIntent;
 
-  @ApiPropertyOptional({ 
-    description: 'Additional metadata (attachments, citations, etc.)' 
+  @ApiPropertyOptional({
+    description: 'Additional metadata (attachments, citations, etc.)',
   })
   @IsOptional()
   @IsObject()
@@ -99,36 +99,36 @@ export class CreateMessageDto {
  * DTO for retrieving messages with pagination
  */
 export class GetMessagesDto {
-  @ApiPropertyOptional({ 
+  @ApiPropertyOptional({
     description: 'Filter by conversation ID',
-    example: 'cm123abc456def789'
+    example: 'cm123abc456def789',
   })
   @IsOptional()
   @IsString()
   conversationId?: string;
 
-  @ApiPropertyOptional({ 
+  @ApiPropertyOptional({
     description: 'Filter by role',
-    enum: MessageRole
+    enum: MessageRole,
   })
   @IsOptional()
   @IsEnum(MessageRole)
   role?: MessageRole;
 
-  @ApiPropertyOptional({ 
-    description: 'Sort order', 
-    enum: ['asc', 'desc'], 
-    default: 'desc' 
+  @ApiPropertyOptional({
+    description: 'Sort order',
+    enum: ['asc', 'desc'],
+    default: 'desc',
   })
   @IsOptional()
   @IsString()
   order?: 'asc' | 'desc';
 
-  @ApiPropertyOptional({ 
-    description: 'Number of results per page', 
+  @ApiPropertyOptional({
+    description: 'Number of results per page',
     default: 50,
     minimum: 1,
-    maximum: 100
+    maximum: 100,
   })
   @IsOptional()
   @Type(() => Number)
@@ -137,10 +137,10 @@ export class GetMessagesDto {
   @Max(100)
   limit?: number;
 
-  @ApiPropertyOptional({ 
-    description: 'Offset for pagination', 
+  @ApiPropertyOptional({
+    description: 'Offset for pagination',
     default: 0,
-    minimum: 0
+    minimum: 0,
   })
   @IsOptional()
   @Type(() => Number)

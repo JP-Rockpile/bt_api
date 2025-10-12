@@ -1,9 +1,9 @@
 /**
  * Central re-export of shared types for use across the API
- * 
+ *
  * This file provides a single import point for all shared types,
  * making it easy to maintain consistency across the codebase.
- * 
+ *
  * Updated for @betthink/shared v0.2.0
  */
 
@@ -17,7 +17,7 @@ export type {
   Participant,
   Venue,
   ExternalIdentifiers,
-  
+
   // Markets & Odds
   Market,
   MarketParameters,
@@ -26,7 +26,7 @@ export type {
   BestOdds,
   OddsMovement,
   ClosingLineValue,
-  
+
   // Bets
   Bet,
   BetLeg,
@@ -37,7 +37,7 @@ export type {
   Selection,
   SelectionData,
   SelectionResult,
-  
+
   // Users
   User,
   UserProfile,
@@ -45,7 +45,7 @@ export type {
   RiskSettings,
   NotificationPreferences,
   LinkedSportsbookAccount,
-  
+
   // Sportsbooks
   Sportsbook,
   SportsbookFeatures,
@@ -53,7 +53,7 @@ export type {
   Promotion,
   CommissionStructure,
   DeepLinkCapabilities,
-  
+
   // Chat/Messages (Core)
   Conversation,
   Message,
@@ -62,7 +62,7 @@ export type {
   MessageReaction,
   TypingIndicator,
   StreamingEvent,
-  
+
   // Chat/Messages (Mobile - v0.2.0)
   ChatMessage,
   LocalChatMessage,
@@ -70,7 +70,7 @@ export type {
   ChatThread,
   ChatHistoryResponse,
   ConversationListResponse,
-  
+
   // Server-Sent Events (v0.2.0)
   SSEEvent,
   StreamChunk,
@@ -83,20 +83,20 @@ export type {
   LLMCompleteEvent,
   SystemEvent,
   ErrorEvent,
-  
+
   // Notifications (v0.2.0)
   PushNotification,
   NotificationType,
   DeviceToken,
   DevicePlatform,
-  
+
   // Analytics (v0.2.0)
   AnalyticsEvent,
   EventName,
-  
+
   // Synchronization (v0.2.0)
   SyncStatus,
-  
+
   // Common types
   AmericanOdds,
   DecimalOdds,
@@ -143,4 +143,3 @@ export {
 
 // Type guards and utility types
 export type { OptionalWithReason } from '@betthink/shared';
-

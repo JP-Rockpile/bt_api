@@ -64,10 +64,7 @@ export class Auth0Strategy extends PassportStrategy(Strategy, 'jwt') {
     }
 
     // Find or create user in database
-    const dbUser = await this.usersService.findOrCreate(
-      payload.sub,
-      payload.email,
-    );
+    const dbUser = await this.usersService.findOrCreate(payload.sub, payload.email);
 
     // Extract user information from JWT and database
     const user: RequestUser = {

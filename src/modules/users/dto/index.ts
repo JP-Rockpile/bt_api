@@ -1,13 +1,13 @@
-import { 
-  IsOptional, 
-  IsObject, 
-  IsArray, 
-  IsString, 
-  IsBoolean, 
+import {
+  IsOptional,
+  IsObject,
+  IsArray,
+  IsString,
+  IsBoolean,
   IsNumber,
   IsNotEmpty,
   Min,
-  Max 
+  Max,
 } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
@@ -17,34 +17,34 @@ import { Type } from 'class-transformer';
  * Maps to shared UserProfile and UserPreferences types
  */
 export class UpdateUserDto {
-  @ApiPropertyOptional({ 
-    description: 'User preferences as JSON object (odds format, stake sizing, notifications, etc.)' 
+  @ApiPropertyOptional({
+    description: 'User preferences as JSON object (odds format, stake sizing, notifications, etc.)',
   })
   @IsOptional()
   @IsObject()
   preferences?: Record<string, unknown>;
 
-  @ApiPropertyOptional({ 
+  @ApiPropertyOptional({
     description: 'Expo push notification device tokens',
     type: [String],
-    example: ['ExponentPushToken[xxxxxxxxxxxxxxxxxxxxxx]']
+    example: ['ExponentPushToken[xxxxxxxxxxxxxxxxxxxxxx]'],
   })
   @IsOptional()
   @IsArray()
   @IsString({ each: true })
   deviceTokens?: string[];
 
-  @ApiPropertyOptional({ 
+  @ApiPropertyOptional({
     description: 'User display name',
-    example: 'John Smith'
+    example: 'John Smith',
   })
   @IsOptional()
   @IsString()
   displayName?: string;
 
-  @ApiPropertyOptional({ 
+  @ApiPropertyOptional({
     description: 'User profile picture URL',
-    example: 'https://example.com/avatar.jpg'
+    example: 'https://example.com/avatar.jpg',
   })
   @IsOptional()
   @IsString()
@@ -56,19 +56,19 @@ export class UpdateUserDto {
  * Maps to shared LinkedSportsbookAccount type
  */
 export class LinkSportsbookDto {
-  @ApiProperty({ 
+  @ApiProperty({
     description: 'Sportsbook ID to link',
-    example: 'draftkings'
+    example: 'draftkings',
   })
   @IsString()
   @IsNotEmpty()
   sportsbookId: string;
 
-  @ApiPropertyOptional({ 
+  @ApiPropertyOptional({
     description: 'User preference order (lower = higher priority)',
     example: 1,
     minimum: 1,
-    maximum: 100
+    maximum: 100,
   })
   @IsOptional()
   @IsNumber()
@@ -77,17 +77,17 @@ export class LinkSportsbookDto {
   @Max(100)
   preferenceOrder?: number;
 
-  @ApiPropertyOptional({ 
+  @ApiPropertyOptional({
     description: 'Whether user has verified account access',
-    example: true
+    example: true,
   })
   @IsOptional()
   @IsBoolean()
   isVerified?: boolean;
 
-  @ApiPropertyOptional({ 
+  @ApiPropertyOptional({
     description: 'Account username or email at sportsbook',
-    example: 'john.smith@example.com'
+    example: 'john.smith@example.com',
   })
   @IsOptional()
   @IsString()
@@ -99,10 +99,10 @@ export class LinkSportsbookDto {
  * Maps to shared RiskSettings type
  */
 export class UpdateRiskSettingsDto {
-  @ApiPropertyOptional({ 
+  @ApiPropertyOptional({
     description: 'Total bankroll amount',
     example: 10000,
-    minimum: 0
+    minimum: 0,
   })
   @IsOptional()
   @IsNumber()
@@ -110,11 +110,11 @@ export class UpdateRiskSettingsDto {
   @Min(0)
   bankroll?: number;
 
-  @ApiPropertyOptional({ 
+  @ApiPropertyOptional({
     description: 'Maximum bet size as percentage of bankroll',
     example: 5,
     minimum: 0,
-    maximum: 100
+    maximum: 100,
   })
   @IsOptional()
   @IsNumber()
@@ -123,10 +123,10 @@ export class UpdateRiskSettingsDto {
   @Max(100)
   maxBetPercentage?: number;
 
-  @ApiPropertyOptional({ 
+  @ApiPropertyOptional({
     description: 'Maximum daily loss limit',
     example: 500,
-    minimum: 0
+    minimum: 0,
   })
   @IsOptional()
   @IsNumber()
@@ -134,11 +134,11 @@ export class UpdateRiskSettingsDto {
   @Min(0)
   maxDailyLoss?: number;
 
-  @ApiPropertyOptional({ 
+  @ApiPropertyOptional({
     description: 'Kelly Criterion fraction (typically 0.1-0.5)',
     example: 0.25,
     minimum: 0,
-    maximum: 1
+    maximum: 1,
   })
   @IsOptional()
   @IsNumber()
