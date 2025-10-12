@@ -17,6 +17,9 @@ export class ChatService {
     metadata?: Record<string, unknown>,
   ) {
     const conversationId = createId();
+    const now = new Date().toISOString();
+    let messageCount = 0;
+    let lastMessageAt: string | null = null;
 
     // If an initial message is provided, create it
     if (initialMessage) {
@@ -24,18 +27,29 @@ export class ChatService {
         title,
         ...metadata,
       });
+      messageCount = 1;
+      lastMessageAt = now;
+
+      // TODO: Remove this placeholder once LLM is hooked up
+      // Create a simple assistant response for now
+      await this.createMessage(userId, conversationId, 'ASSISTANT', 'hi');
+      messageCount = 2;
     }
 
+    // Return conversation in the format expected by mobile app
     return {
-      conversationId,
-      title,
-      createdAt: new Date().toISOString(),
-      metadata,
+      id: conversationId,
+      userId,
+      title: title || '',
+      createdAt: now,
+      updatedAt: now,
+      lastMessageAt,
+      messageCount,
     };
   }
 
   async getConversationHistory(userId: string, conversationId: string, limit: number = 50) {
-    return this.prisma.message.findMany({
+    const messages = await this.prisma.message.findMany({
       where: {
         userId,
         conversationId,
@@ -43,6 +57,16 @@ export class ChatService {
       orderBy: { createdAt: 'asc' },
       take: limit,
     });
+
+    // Map database fields to frontend-expected format
+    return messages.map((message) => ({
+      id: message.id,
+      chatId: message.conversationId, // Frontend expects 'chatId' not 'conversationId'
+      role: message.role.toLowerCase(), // Convert 'USER' to 'user', 'ASSISTANT' to 'assistant'
+      content: message.content,
+      timestamp: message.createdAt.toISOString(), // Frontend expects 'timestamp' not 'createdAt'
+      metadata: message.metadata || {},
+    }));
   }
 
   async createMessage(

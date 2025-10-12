@@ -8,6 +8,7 @@ import {
   UseGuards,
   Sse,
   MessageEvent,
+  HttpCode,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../../common/auth/guards/jwt-auth.guard';
@@ -28,6 +29,7 @@ export class ChatController {
   ) {}
 
   @Post('conversations')
+  @HttpCode(201)
   @ApiOperation({ summary: 'Create a new conversation' })
   @ApiResponse({ status: 201, description: 'Conversation created successfully' })
   async createConversation(

@@ -13,8 +13,13 @@ RUN apt-get update && apt-get install -y \
     g++ \
     && rm -rf /var/lib/apt/lists/*
 
+# Accept build argument for GitHub token
+ARG NODE_AUTH_TOKEN
+ENV NODE_AUTH_TOKEN=${NODE_AUTH_TOKEN}
+
 # Copy package files
 COPY package*.json ./
+COPY .npmrc ./
 COPY prisma ./prisma/
 
 # Install dependencies

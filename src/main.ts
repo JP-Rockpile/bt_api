@@ -5,6 +5,8 @@ import { Logger } from 'nestjs-pino';
 import helmet from 'helmet';
 import { AppModule } from './app.module';
 import { initTracing } from './common/tracing/tracer';
+import { TransformInterceptor } from './common/interceptors/transform.interceptor';
+import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
 
 async function bootstrap() {
   // Initialize OpenTelemetry tracing before app creation
@@ -50,6 +52,12 @@ async function bootstrap() {
       },
     }),
   );
+
+  // Global response transformation interceptor
+  app.useGlobalInterceptors(new TransformInterceptor());
+
+  // Global exception filter for consistent error responses
+  app.useGlobalFilters(new AllExceptionsFilter());
 
   // Swagger/OpenAPI documentation
   const config = new DocumentBuilder()

@@ -9,10 +9,10 @@ import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
 
 export interface ApiResponse<T> {
-  statusCode: number;
-  message?: string;
+  success: boolean;
   data: T;
   timestamp: string;
+  statusCode?: number;
   requestId?: string;
 }
 
@@ -23,13 +23,27 @@ export class TransformInterceptor<T> implements NestInterceptor<T, ApiResponse<T
     const response = context.switchToHttp().getResponse();
 
     return next.handle().pipe(
-      map((data) => ({
-        statusCode: response.statusCode || HttpStatus.OK,
-        message: data?.message || 'Success',
-        data: data?.data !== undefined ? data.data : data,
-        timestamp: new Date().toISOString(),
-        requestId: request.id,
-      })),
+      map((data) => {
+        // Skip transformation for SSE streams (Observable responses)
+        if (data && typeof data === 'object' && 'pipe' in data) {
+          return data;
+        }
+
+        const statusCode = response.statusCode || HttpStatus.OK;
+
+        // If data is already wrapped (has success and data properties), return as-is
+        if (data && typeof data === 'object' && 'success' in data && 'data' in data) {
+          return data;
+        }
+
+        return {
+          success: statusCode >= 200 && statusCode < 300,
+          data,
+          timestamp: new Date().toISOString(),
+          statusCode,
+          requestId: request.id,
+        };
+      }),
     );
   }
 }
