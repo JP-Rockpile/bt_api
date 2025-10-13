@@ -41,11 +41,6 @@ export const validationSchema = Joi.object({
     : Joi.string().required(),
   THE_ODDS_API_BASE_URL: Joi.string().default('https://api.the-odds-api.com/v4'),
 
-  // OpenAI
-  OPENAI_API_KEY: isTestEnvironment ? Joi.string().default('test-openai-key') : Joi.string().required(),
-  OPENAI_CHAT_MODEL: Joi.string().default('gpt-4o-mini'),
-  OPENAI_EMBEDDING_MODEL: Joi.string().default('text-embedding-3-small'),
-
   // Expo
   EXPO_ACCESS_TOKEN: Joi.string().optional().allow(''),
 

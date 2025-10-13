@@ -16,7 +16,6 @@ import { CurrentUser } from '../../common/auth/decorators/current-user.decorator
 import { ChatService } from './chat.service';
 import { SseService } from './services/sse.service';
 import { CreateConversationDto } from './dto';
-import { ChatOrchestratorService } from './services/chat-orchestrator.service';
 import { Observable } from 'rxjs';
 
 @ApiTags('chat')
@@ -27,7 +26,6 @@ export class ChatController {
   constructor(
     private chatService: ChatService,
     private sseService: SseService,
-    private orchestrator: ChatOrchestratorService,
   ) {}
 
   @Post('conversations')
@@ -73,11 +71,15 @@ export class ChatController {
     @Param('conversationId') conversationId: string,
     @Body('content') content: string,
   ) {
+    // Persist the user message
     const saved = await this.chatService.createMessage(userId, conversationId, 'USER', content);
-    // Kick off orchestration asynchronously; no need to await
-    this.orchestrator
-      .handleUserMessage({ userId, conversationId, content })
-      .catch(() => void 0);
+    
+    // TODO: Forward to bt_model for processing
+    // bt_model will handle LLM, RAG, tool calling, and stream responses back
+    // Either:
+    // 1. POST to bt_model and proxy SSE back through our SseService
+    // 2. Return 202 and let frontend connect directly to bt_model SSE endpoint
+    
     return saved;
   }
 

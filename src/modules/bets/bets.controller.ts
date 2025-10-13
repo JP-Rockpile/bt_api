@@ -87,4 +87,22 @@ export class BetsController {
   async getBet(@CurrentUser('id') userId: string, @Param('betId') betId: string) {
     return this.betsService.getBet(userId, betId);
   }
+
+  // Tool endpoints for bt_model
+  @Post('tools/plan')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: '[bt_model tool] Plan a bet with validation (no LLM logic here)' })
+  @ApiResponse({ status: 200, description: 'Validated bet plan ready for user confirmation' })
+  async planBetTool(@CurrentUser('id') userId: string, @Body() planBetDto: PlanBetDto) {
+    // bt_model handles LLM reasoning; this just validates and returns structured bet plan
+    return this.betsService.planBet(userId, planBetDto);
+  }
+
+  @Get('tools/status/:betId')
+  @ApiOperation({ summary: '[bt_model tool] Get bet status' })
+  @ApiResponse({ status: 200, description: 'Bet status retrieved' })
+  @ApiResponse({ status: 404, description: 'Bet not found' })
+  async getBetStatusTool(@CurrentUser('id') userId: string, @Param('betId') betId: string) {
+    return this.betsService.getBet(userId, betId);
+  }
 }
