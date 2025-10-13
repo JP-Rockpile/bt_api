@@ -73,13 +73,13 @@ export class ChatController {
   ) {
     // Persist the user message
     const saved = await this.chatService.createMessage(userId, conversationId, 'USER', content);
-    
+
     // TODO: Forward to bt_model for processing
     // bt_model will handle LLM, RAG, tool calling, and stream responses back
     // Either:
     // 1. POST to bt_model and proxy SSE back through our SseService
     // 2. Return 202 and let frontend connect directly to bt_model SSE endpoint
-    
+
     return saved;
   }
 

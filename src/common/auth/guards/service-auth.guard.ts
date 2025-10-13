@@ -19,4 +19,3 @@ export class ServiceAuthGuard implements CanActivate {
     return true;
   }
 }
-

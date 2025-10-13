@@ -19,4 +19,3 @@ import { MarketParserService } from './services/market-parser.service';
   exports: [UnabatedService, MarketParserService],
 })
 export class UnabatedModule {}
-

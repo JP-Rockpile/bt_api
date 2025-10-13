@@ -73,7 +73,7 @@ export class UnabatedService implements OnModuleInit {
     this.logger.log('Syncing bet types...');
 
     const betTypes = await this.restSnapshot.fetchBetTypes();
-    const normalized = betTypes.map(bt => this.normalizer.normalizeBetType(bt));
+    const normalized = betTypes.map((bt) => this.normalizer.normalizeBetType(bt));
 
     for (const betType of normalized) {
       await this.prisma.betType.upsert({
@@ -90,7 +90,7 @@ export class UnabatedService implements OnModuleInit {
     this.logger.log(`Syncing market sources for ${league}/${marketType}...`);
 
     const sources = await this.restSnapshot.fetchMarketSources(league, marketType);
-    const normalized = sources.map(s => this.normalizer.normalizeMarketSource(s));
+    const normalized = sources.map((s) => this.normalizer.normalizeMarketSource(s));
 
     for (const source of normalized) {
       await this.prisma.marketSource.upsert({
@@ -130,18 +130,14 @@ export class UnabatedService implements OnModuleInit {
     }
 
     // Extract and store market lines
-    const lines = this.normalizer.extractMarketLinesFromSnapshot(
-      snapshotData,
-      league,
-      marketType,
-    );
+    const lines = this.normalizer.extractMarketLinesFromSnapshot(snapshotData, league, marketType);
 
     // Batch upsert in chunks
     const BATCH_SIZE = 100;
     for (let i = 0; i < lines.length; i += BATCH_SIZE) {
       const batch = lines.slice(i, i + BATCH_SIZE);
       await Promise.all(
-        batch.map(line =>
+        batch.map((line) =>
           this.prisma.marketLine.upsert({
             where: { id: line.id },
             update: line,
@@ -168,7 +164,7 @@ export class UnabatedService implements OnModuleInit {
     const leagues = this.restSnapshot.getAvailableLeagues();
 
     // Start subscription in background (don't await)
-    this.realtime.subscribe(leagues).catch(error => {
+    this.realtime.subscribe(leagues).catch((error) => {
       this.logger.error(`Real-time subscription error: ${error.message}`);
     });
 
@@ -235,4 +231,3 @@ export class UnabatedService implements OnModuleInit {
     });
   }
 }
-

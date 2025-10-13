@@ -19,7 +19,8 @@ export class RealtimeService implements OnModuleDestroy {
   private readonly apiRegion: string;
 
   constructor(private configService: ConfigService) {
-    this.apiHost = this.configService.get<string>('UNABATED_REALTIME_HOST') || 'realtime.unabated.com';
+    this.apiHost =
+      this.configService.get<string>('UNABATED_REALTIME_HOST') || 'realtime.unabated.com';
     this.apiKey = this.configService.get<string>('UNABATED_REALTIME_API_KEY') || '';
     this.apiRegion = this.configService.get<string>('UNABATED_REALTIME_REGION', 'us-east-1');
     this.maxReconnectSec = this.configService.get<number>('UNABATED_WS_MAX_RECONNECT_SEC', 60);
@@ -225,7 +226,7 @@ export class RealtimeService implements OnModuleDestroy {
     const backoffSeconds = Math.min(this.maxReconnectSec, Math.pow(2, this.reconnectAttempts));
 
     this.logger.log(`Reconnecting after ${backoffSeconds}s (attempt ${this.reconnectAttempts})`);
-    await new Promise(resolve => setTimeout(resolve, backoffSeconds * 1000));
+    await new Promise((resolve) => setTimeout(resolve, backoffSeconds * 1000));
   }
 
   close(): void {
@@ -244,4 +245,3 @@ export class RealtimeService implements OnModuleDestroy {
     });
   }
 }
-

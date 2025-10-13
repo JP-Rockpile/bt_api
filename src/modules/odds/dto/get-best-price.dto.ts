@@ -24,4 +24,3 @@ export class GetBestPriceDto {
   @IsString()
   opponent?: string;
 }
-

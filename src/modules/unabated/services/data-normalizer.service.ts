@@ -43,7 +43,7 @@ export class DataNormalizerService {
 
     const periodTypes = snapshotData.periodTypes || {};
 
-    for (const [periodTypeName, periodData] of Object.entries(periodTypes)) {
+    for (const [_periodTypeName, periodData] of Object.entries(periodTypes)) {
       if (typeof periodData !== 'object' || !periodData) continue;
 
       for (const timing of ['pregame', 'live']) {
@@ -56,9 +56,7 @@ export class DataNormalizerService {
           const eventId = String(event.eventId);
           if (!eventId || seenEventIds.has(eventId)) continue;
 
-          const startTime = event.eventStart
-            ? new Date(event.eventStart)
-            : null;
+          const startTime = event.eventStart ? new Date(event.eventStart) : null;
 
           const eventTeams = event.eventTeams || {};
           let homeTeamId = null;
@@ -105,11 +103,7 @@ export class DataNormalizerService {
     return events;
   }
 
-  extractMarketLinesFromSnapshot(
-    snapshotData: any,
-    leagueId: string,
-    marketType: string,
-  ): any[] {
+  extractMarketLinesFromSnapshot(snapshotData: any, leagueId: string, marketType: string): any[] {
     const lines = [];
     const periodTypes = snapshotData.periodTypes || {};
 
@@ -153,9 +147,7 @@ export class DataNormalizerService {
                 decimalOdds = price > 0 ? price / 100 + 1 : 100 / Math.abs(price) + 1;
               }
 
-              const updatedAt = line.modifiedOn
-                ? new Date(line.modifiedOn)
-                : new Date();
+              const updatedAt = line.modifiedOn ? new Date(line.modifiedOn) : new Date();
 
               lines.push({
                 id: marketLineId,
@@ -221,4 +213,3 @@ export class DataNormalizerService {
     return Array.from(teams.values());
   }
 }
-

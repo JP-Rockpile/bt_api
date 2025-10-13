@@ -20,9 +20,6 @@ export class OddsQueryService {
    * Checks canonical names and aliases
    */
   async findTeamByName(teamName: string, league: string): Promise<string | null> {
-    // Normalize the input
-    const normalizedInput = TeamMappingUtils.normalize(teamName);
-
     // First, try direct match on canonical name (case-insensitive)
     const directMatch = await this.prisma.teamMapping.findFirst({
       where: {
@@ -47,11 +44,11 @@ export class OddsQueryService {
     // Check aliases in the JSON field
     for (const mapping of allMappings) {
       const aliases = mapping.aliases as any;
-      
+
       // Check provider-specific aliases (unabated, theodds, etc.)
       if (aliases && typeof aliases === 'object') {
         const allAliases: string[] = [];
-        
+
         // Collect all alias values
         for (const key of Object.keys(aliases)) {
           if (key === 'variants' && Array.isArray(aliases.variants)) {
@@ -60,11 +57,13 @@ export class OddsQueryService {
             allAliases.push(aliases[key]);
           }
         }
-        
+
         // Check if any alias matches (case-insensitive)
         for (const alias of allAliases) {
           if (typeof alias === 'string' && alias.toLowerCase().includes(teamName.toLowerCase())) {
-            this.logger.debug(`Alias match found: ${teamName} -> ${mapping.canonicalName} (via ${alias})`);
+            this.logger.debug(
+              `Alias match found: ${teamName} -> ${mapping.canonicalName} (via ${alias})`,
+            );
             return mapping.canonicalName;
           }
         }
@@ -133,8 +132,7 @@ export class OddsQueryService {
       if (!matchesTeam) {
         const teamLower = dto.team.toLowerCase();
         matchesTeam =
-          homeTeam.toLowerCase().includes(teamLower) ||
-          awayTeam.toLowerCase().includes(teamLower);
+          homeTeam.toLowerCase().includes(teamLower) || awayTeam.toLowerCase().includes(teamLower);
       }
 
       if (!dto.opponent) return matchesTeam;
@@ -210,4 +208,3 @@ export class OddsQueryService {
     };
   }
 }
-

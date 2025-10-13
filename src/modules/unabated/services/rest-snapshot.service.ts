@@ -13,7 +13,8 @@ export class RestSnapshotService {
   private lastRequestTime: Map<string, number> = new Map();
 
   constructor(private configService: ConfigService) {
-    this.baseUrl = this.configService.get<string>('UNABATED_DATA_BASE_URL') || 'https://data.unabated.com';
+    this.baseUrl =
+      this.configService.get<string>('UNABATED_DATA_BASE_URL') || 'https://data.unabated.com';
     this.apiToken = this.configService.get<string>('UNABATED_API_TOKEN') || '';
 
     this.client = axios.create({
@@ -21,7 +22,7 @@ export class RestSnapshotService {
       timeout: 180000,
       headers: {
         'X-Api-Key': this.apiToken,
-        'Accept': 'application/json',
+        Accept: 'application/json',
       },
     });
   }
@@ -34,7 +35,7 @@ export class RestSnapshotService {
     if (timeSinceLast < this.rateLimitSeconds * 1000) {
       const sleepTime = this.rateLimitSeconds * 1000 - timeSinceLast;
       this.logger.debug(`Rate limiting: sleeping ${sleepTime}ms for ${key}`);
-      await new Promise(resolve => setTimeout(resolve, sleepTime));
+      await new Promise((resolve) => setTimeout(resolve, sleepTime));
     }
 
     this.lastRequestTime.set(key, Date.now());
@@ -112,4 +113,3 @@ export class RestSnapshotService {
     return ['NFL', 'NBA', 'MLB', 'NHL', 'NCAAF', 'NCAAB', 'UFC', 'SOCCER', 'TENNIS'];
   }
 }
-

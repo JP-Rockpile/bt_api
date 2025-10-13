@@ -20,13 +20,12 @@ export class FlexibleAuthGuard implements CanActivate {
 
     // Fall back to JWT authentication
     const result = this.jwtAuthGuard.canActivate(context);
-    
+
     // Handle both sync and async returns from JwtAuthGuard
     if (result instanceof Promise) {
       return result;
     }
-    
+
     return result as boolean;
   }
 }
-

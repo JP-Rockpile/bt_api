@@ -9,7 +9,14 @@ import {
   HttpStatus,
   Body,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiQuery, ApiSecurity } from '@nestjs/swagger';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiBearerAuth,
+  ApiQuery,
+  ApiSecurity,
+} from '@nestjs/swagger';
 import { JwtAuthGuard } from '../../common/auth/guards/jwt-auth.guard';
 import { FlexibleAuthGuard } from '../../common/auth/guards/flexible-auth.guard';
 import { OddsService } from './odds.service';

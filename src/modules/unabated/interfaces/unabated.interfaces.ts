@@ -65,4 +65,3 @@ export interface ParsedMarkets {
   spread: any[];
   total: any[];
 }
-
