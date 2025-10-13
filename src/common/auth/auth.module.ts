@@ -3,6 +3,9 @@ import { PassportModule } from '@nestjs/passport';
 import { JwtModule } from '@nestjs/jwt';
 import { Auth0Strategy } from './strategies/auth0.strategy';
 import { RolesGuard } from './guards/roles.guard';
+import { JwtAuthGuard } from './guards/jwt-auth.guard';
+import { ServiceAuthGuard } from './guards/service-auth.guard';
+import { FlexibleAuthGuard } from './guards/flexible-auth.guard';
 import { UsersModule } from '../../modules/users/users.module';
 
 @Module({
@@ -11,7 +14,7 @@ import { UsersModule } from '../../modules/users/users.module';
     JwtModule.register({}), // Configuration handled by Auth0Strategy
     UsersModule,
   ],
-  providers: [Auth0Strategy, RolesGuard],
-  exports: [PassportModule, RolesGuard],
+  providers: [Auth0Strategy, RolesGuard, JwtAuthGuard, ServiceAuthGuard, FlexibleAuthGuard],
+  exports: [PassportModule, RolesGuard, JwtAuthGuard, ServiceAuthGuard, FlexibleAuthGuard],
 })
 export class AuthModule {}

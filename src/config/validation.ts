@@ -78,4 +78,8 @@ export const validationSchema = Joi.object({
   // Security
   IDEMPOTENCY_KEY_TTL_HOURS: Joi.number().default(24),
   JWT_CACHE_TTL_SECONDS: Joi.number().default(3600),
+  BT_MODEL_SERVICE_TOKEN: Joi.string()
+    .min(32)
+    .required()
+    .description('Service token for bt_model authentication'),
 });

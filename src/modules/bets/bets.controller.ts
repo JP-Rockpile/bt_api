@@ -18,6 +18,7 @@ import {
   ApiSecurity,
 } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../../common/auth/guards/jwt-auth.guard';
+import { FlexibleAuthGuard } from '../../common/auth/guards/flexible-auth.guard';
 import { CurrentUser } from '../../common/auth/decorators/current-user.decorator';
 import { BetsService } from './bets.service';
 import { PlanBetDto } from './dto/plan-bet.dto';
@@ -90,7 +91,9 @@ export class BetsController {
 
   // Tool endpoints for bt_model
   @Post('tools/plan')
+  @UseGuards(FlexibleAuthGuard)
   @HttpCode(HttpStatus.OK)
+  @ApiSecurity('service-token')
   @ApiOperation({ summary: '[bt_model tool] Plan a bet with validation (no LLM logic here)' })
   @ApiResponse({ status: 200, description: 'Validated bet plan ready for user confirmation' })
   async planBetTool(@CurrentUser('id') userId: string, @Body() planBetDto: PlanBetDto) {
@@ -99,6 +102,8 @@ export class BetsController {
   }
 
   @Get('tools/status/:betId')
+  @UseGuards(FlexibleAuthGuard)
+  @ApiSecurity('service-token')
   @ApiOperation({ summary: '[bt_model tool] Get bet status' })
   @ApiResponse({ status: 200, description: 'Bet status retrieved' })
   @ApiResponse({ status: 404, description: 'Bet not found' })

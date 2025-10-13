@@ -9,8 +9,9 @@ import {
   HttpStatus,
   Body,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiQuery, ApiSecurity } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../../common/auth/guards/jwt-auth.guard';
+import { FlexibleAuthGuard } from '../../common/auth/guards/flexible-auth.guard';
 import { OddsService } from './odds.service';
 import { OddsQueryService } from './services/odds-query.service';
 import { GetBestPriceDto } from './dto';
@@ -86,6 +87,8 @@ export class OddsController {
 
   // Tool endpoints for bt_model
   @Post('tools/best-price')
+  @UseGuards(FlexibleAuthGuard)
+  @ApiSecurity('service-token')
   @ApiOperation({ summary: '[bt_model tool] Get best available odds for a team/market' })
   @ApiResponse({ status: 200, description: 'Best odds found' })
   @ApiResponse({ status: 404, description: 'No matching event or market found' })

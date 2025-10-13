@@ -101,4 +101,22 @@ export class UsersService {
       data: { expoPushTokens: tokens },
     });
   }
+
+  async getUserPreferences(userId: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { preferences: true },
+    });
+
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    const preferences = (user.preferences as Record<string, any>) || {};
+
+    return {
+      timezone: preferences.timezone || 'America/New_York',
+      defaultStake: preferences.defaultStake || 10.0,
+    };
+  }
 }

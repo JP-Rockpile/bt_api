@@ -6,6 +6,7 @@ import { UnabatedAdapter } from './adapters/unabated.adapter';
 import { TheOddsApiAdapter } from './adapters/theodds.adapter';
 import { OddsQueryService } from './services/odds-query.service';
 import { EventsModule } from '../events/events.module';
+import { AuthModule } from '../../common/auth/auth.module';
 
 @Module({
   imports: [
@@ -14,6 +15,7 @@ import { EventsModule } from '../events/events.module';
       maxRedirects: 5,
     }),
     EventsModule,
+    AuthModule,
   ],
   controllers: [OddsController],
   providers: [OddsService, UnabatedAdapter, TheOddsApiAdapter, OddsQueryService],

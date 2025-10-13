@@ -1,6 +1,7 @@
 import { Controller, Get, Put, Post, Delete, Body, Param, UseGuards } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiSecurity } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../../common/auth/guards/jwt-auth.guard';
+import { FlexibleAuthGuard } from '../../common/auth/guards/flexible-auth.guard';
 import { CurrentUser } from '../../common/auth/decorators/current-user.decorator';
 import { UsersService } from './users.service';
 
@@ -55,5 +56,16 @@ export class UsersController {
   @ApiResponse({ status: 200, description: 'Push token registered' })
   async updatePushToken(@CurrentUser('id') userId: string, @Body('token') token: string) {
     return this.usersService.updatePushToken(userId, token);
+  }
+
+  // Tool endpoints for bt_model
+  @Get(':userId/preferences')
+  @UseGuards(FlexibleAuthGuard)
+  @ApiSecurity('service-token')
+  @ApiOperation({ summary: '[bt_model tool] Get user preferences' })
+  @ApiResponse({ status: 200, description: 'User preferences retrieved' })
+  @ApiResponse({ status: 404, description: 'User not found' })
+  async getUserPreferences(@Param('userId') userId: string) {
+    return this.usersService.getUserPreferences(userId);
   }
 }
