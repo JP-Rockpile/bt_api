@@ -21,6 +21,12 @@ export class UnabatedService implements OnModuleInit {
   ) {}
 
   async onModuleInit() {
+    // Skip Unabated initialization in test environment
+    if (process.env.NODE_ENV === 'test') {
+      this.logger.log('⏭️  Skipping Unabated initialization in test environment');
+      return;
+    }
+
     this.logger.log('🚀 Initializing Unabated integration...');
 
     try {

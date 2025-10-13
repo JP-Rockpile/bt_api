@@ -23,6 +23,7 @@ process.env.AUTH0_ISSUER = process.env.AUTH0_ISSUER || 'https://test.auth0.com/'
 process.env.UNABATED_API_KEY = process.env.UNABATED_API_KEY || 'test_key';
 process.env.THE_ODDS_API_KEY = process.env.THE_ODDS_API_KEY || 'test_key';
 process.env.EXPO_ACCESS_TOKEN = process.env.EXPO_ACCESS_TOKEN || 'test_token';
+process.env.BT_MODEL_SERVICE_TOKEN = process.env.BT_MODEL_SERVICE_TOKEN || 'test_bt_model_service_token_for_e2e_testing_123456';
 
 // Rate Limiting
 process.env.RATE_LIMIT_TTL = '60';

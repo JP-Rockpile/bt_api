@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { PassportModule } from '@nestjs/passport';
 import { JwtModule } from '@nestjs/jwt';
 import { Auth0Strategy } from './strategies/auth0.strategy';
@@ -12,7 +12,7 @@ import { UsersModule } from '../../modules/users/users.module';
   imports: [
     PassportModule.register({ defaultStrategy: 'jwt' }),
     JwtModule.register({}), // Configuration handled by Auth0Strategy
-    UsersModule,
+    forwardRef(() => UsersModule),
   ],
   providers: [Auth0Strategy, RolesGuard, JwtAuthGuard, ServiceAuthGuard, FlexibleAuthGuard],
   exports: [PassportModule, RolesGuard, JwtAuthGuard, ServiceAuthGuard, FlexibleAuthGuard],
