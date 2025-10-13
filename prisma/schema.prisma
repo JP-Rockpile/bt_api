@@ -495,3 +495,145 @@ enum JobLogStatus {
   FAILED
   DELAYED
 }
+
+// ============================================================================
+// UNABATED API INTEGRATION
+// ============================================================================
+
+model BetType {
+  id             Int       @id
+  name           String
+  description    String?
+  betOn          String?   @map("bet_on")
+  sides          Int?
+  canDraw        Boolean?  @default(false) @map("can_draw")
+  hasPoints      Boolean?  @default(false) @map("has_points")
+  selectionCount Int?      @map("selection_count")
+  betRange       String?   @map("bet_range")
+  isFuture       Boolean?  @default(false) @map("is_future")
+  modifiedOn     DateTime? @map("modified_on")
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
+
+  marketLines MarketLine[]
+
+  @@map("bet_types")
+}
+
+model Team {
+  id           String   @id @map("team_id")
+  name         String
+  shortName    String?  @map("short_name")
+  abbreviation String?
+  leagueId     String   @map("league_id")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  homeEvents UnabatedEvent[] @relation("HomeTeam")
+  awayEvents UnabatedEvent[] @relation("AwayTeam")
+
+  @@index([leagueId])
+  @@map("teams")
+}
+
+model Player {
+  id         String   @id @map("player_id")
+  name       String
+  teamId     String?  @map("team_id")
+  leagueId   String?  @map("league_id")
+  position   String?
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  marketLines MarketLine[]
+
+  @@index([teamId])
+  @@index([leagueId])
+  @@map("players")
+}
+
+model MarketSource {
+  id              String   @id @map("source_id")
+  name            String
+  sourceType      String?  @default("sportsbook") @map("source_type")
+  logoUrl         String?  @map("logo_url")
+  thumbnailUrl    String?  @map("thumbnail_url")
+  siteUrl         String?  @map("site_url")
+  isActive        Boolean  @default(true) @map("is_active")
+  statusId        Int?     @map("status_id")
+  propsStatusId   Int?     @map("props_status_id")
+  futuresStatusId Int?     @map("futures_status_id")
+  sourceMetadata  Json?    @map("source_metadata")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  marketLines MarketLine[]
+
+  @@map("market_sources")
+}
+
+model UnabatedEvent {
+  id            String   @id @map("event_id")
+  leagueId      String   @map("league_id")
+  startTime     DateTime? @map("start_time")
+  homeTeamId    String?  @map("home_team_id")
+  awayTeamId    String?  @map("away_team_id")
+  status        String?
+  eventMetadata Json?    @map("event_metadata")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  homeTeam    Team?        @relation("HomeTeam", fields: [homeTeamId], references: [id])
+  awayTeam    Team?        @relation("AwayTeam", fields: [awayTeamId], references: [id])
+  marketLines MarketLine[]
+
+  @@index([leagueId])
+  @@index([startTime])
+  @@index([status])
+  @@map("unabated_events")
+}
+
+model MarketLine {
+  id          String   @id @map("market_line_id")
+  eventId     String   @map("event_id")
+  sourceId    String   @map("source_id")
+  marketType  String   @map("market_type")
+  periodType  String?  @map("period_type")
+  outcome     String?
+  point       Float?
+  price       Int?
+  decimalOdds Float?   @map("decimal_odds")
+  isProp      Boolean  @default(false) @map("is_prop")
+  playerId    String?  @map("player_id")
+  betTypeId   Int?     @map("bet_type_id")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  event        UnabatedEvent @relation(fields: [eventId], references: [id])
+  source       MarketSource  @relation(fields: [sourceId], references: [id])
+  betType      BetType?      @relation(fields: [betTypeId], references: [id])
+  player       Player?       @relation(fields: [playerId], references: [id])
+  lineHistory  LineHistory[]
+
+  @@index([eventId])
+  @@index([sourceId])
+  @@index([marketType])
+  @@index([updatedAt])
+  @@map("market_lines")
+}
+
+model LineHistory {
+  id            String   @id @default(cuid())
+  marketLineId  String   @map("market_line_id")
+  priceBefore   Int?     @map("price_before")
+  priceAfter    Int?     @map("price_after")
+  pointBefore   Float?   @map("point_before")
+  pointAfter    Float?   @map("point_after")
+  changedAt     DateTime @default(now()) @map("changed_at")
+
+  marketLine MarketLine @relation(fields: [marketLineId], references: [id])
+
+  @@index([marketLineId])
+  @@index([changedAt])
+  @@map("line_history")
+}

@@ -16,6 +16,7 @@ import { CurrentUser } from '../../common/auth/decorators/current-user.decorator
 import { ChatService } from './chat.service';
 import { SseService } from './services/sse.service';
 import { CreateConversationDto } from './dto';
+import { ChatOrchestratorService } from './services/chat-orchestrator.service';
 import { Observable } from 'rxjs';
 
 @ApiTags('chat')
@@ -26,6 +27,7 @@ export class ChatController {
   constructor(
     private chatService: ChatService,
     private sseService: SseService,
+    private orchestrator: ChatOrchestratorService,
   ) {}
 
   @Post('conversations')
@@ -71,7 +73,12 @@ export class ChatController {
     @Param('conversationId') conversationId: string,
     @Body('content') content: string,
   ) {
-    return this.chatService.createMessage(userId, conversationId, 'USER', content);
+    const saved = await this.chatService.createMessage(userId, conversationId, 'USER', content);
+    // Kick off orchestration asynchronously; no need to await
+    this.orchestrator
+      .handleUserMessage({ userId, conversationId, content })
+      .catch(() => void 0);
+    return saved;
   }
 
   @Sse('conversations/:conversationId/stream')

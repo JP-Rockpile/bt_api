@@ -24,6 +24,7 @@ import { ChatModule } from './modules/chat/chat.module';
 import { HealthModule } from './modules/health/health.module';
 import { SportsbooksModule } from './modules/sportsbooks/sportsbooks.module';
 import { DocumentsModule } from './modules/documents/documents.module';
+import { UnabatedModule } from './modules/unabated/unabated.module';
 
 // Queue modules
 import { QueuesModule } from './queues/queues.module';
@@ -108,6 +109,7 @@ import { QueuesModule } from './queues/queues.module';
     ChatModule,
     DocumentsModule,
     HealthModule,
+    UnabatedModule,
 
     // Background jobs
     QueuesModule,
