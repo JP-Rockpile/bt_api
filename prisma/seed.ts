@@ -78,7 +78,7 @@ async function main() {
       aliases: {
         unabated: 'Kansas City Chiefs',
         theodds: 'Kansas City Chiefs',
-        variants: ['KC Chiefs', 'Chiefs'],
+        variants: ['KC Chiefs', 'Chiefs', 'KC'],
       },
     },
     {
@@ -88,7 +88,7 @@ async function main() {
       aliases: {
         unabated: 'Los Angeles Lakers',
         theodds: 'Los Angeles Lakers',
-        variants: ['LA Lakers', 'Lakers'],
+        variants: ['LA Lakers', 'Lakers', 'LAL'],
       },
     },
     {
@@ -98,7 +98,47 @@ async function main() {
       aliases: {
         unabated: 'New York Yankees',
         theodds: 'New York Yankees',
-        variants: ['NY Yankees', 'Yankees'],
+        variants: ['NY Yankees', 'Yankees', 'NYY'],
+      },
+    },
+    {
+      canonicalName: 'Milwaukee Brewers',
+      sport: 'MLB',
+      league: 'MLB',
+      aliases: {
+        unabated: 'Milwaukee Brewers',
+        theodds: 'Milwaukee Brewers',
+        variants: ['Brewers', 'MKE Brewers', 'Milwaukee', 'MIL'],
+      },
+    },
+    {
+      canonicalName: 'Chicago Cubs',
+      sport: 'MLB',
+      league: 'MLB',
+      aliases: {
+        unabated: 'Chicago Cubs',
+        theodds: 'Chicago Cubs',
+        variants: ['Cubs', 'CHC', 'Chi Cubs'],
+      },
+    },
+    {
+      canonicalName: 'Buffalo Bills',
+      sport: 'NFL',
+      league: 'NFL',
+      aliases: {
+        unabated: 'Buffalo Bills',
+        theodds: 'Buffalo Bills',
+        variants: ['Bills', 'BUF'],
+      },
+    },
+    {
+      canonicalName: 'Boston Celtics',
+      sport: 'NBA',
+      league: 'NBA',
+      aliases: {
+        unabated: 'Boston Celtics',
+        theodds: 'Boston Celtics',
+        variants: ['Celtics', 'BOS', 'C\'s'],
       },
     },
   ];
@@ -144,6 +184,18 @@ async function main() {
       status: 'SCHEDULED' as const,
       venue: 'Crypto.com Arena',
       externalIds: { test: 'event_002' },
+    },
+    {
+      sportType: 'MLB',
+      league: 'MLB',
+      homeTeam: 'Milwaukee Brewers',
+      awayTeam: 'Chicago Cubs',
+      homeTeamCanonical: 'Milwaukee Brewers',
+      awayTeamCanonical: 'Chicago Cubs',
+      startTime: tomorrow,
+      status: 'SCHEDULED' as const,
+      venue: 'American Family Field',
+      externalIds: { test: 'event_003' },
     },
   ];
 
