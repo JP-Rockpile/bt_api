@@ -110,11 +110,12 @@ async function bootstrap() {
   app.enableShutdownHooks();
 
   const port = process.env.PORT || 3000;
-  await app.listen(port);
+  const host = process.env.HOST || '0.0.0.0'; // Bind to all interfaces for production
+  await app.listen(port, host);
 
   const logger = app.get(Logger);
-  logger.log(`🚀 Application is running on: http://localhost:${port}/${apiPrefix}`);
-  logger.log(`📚 API Documentation: http://localhost:${port}/${apiPrefix}/docs`);
+  logger.log(`🚀 Application is running on: http://${host}:${port}/${apiPrefix}`);
+  logger.log(`📚 API Documentation: http://${host}:${port}/${apiPrefix}/docs`);
   logger.log(`🔍 OpenTelemetry: ${otelEnabled ? 'Enabled' : 'Disabled'}`);
 }
 
