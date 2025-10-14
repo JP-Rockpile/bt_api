@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, Controller, Get } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { LoggerModule } from 'nestjs-pino';
 import { ThrottlerModule } from '@nestjs/throttler';
@@ -28,6 +28,17 @@ import { UnabatedModule } from './modules/unabated/unabated.module';
 
 // Queue modules
 import { QueuesModule } from './queues/queues.module';
+import { Public } from './common/auth/decorators/public.decorator';
+
+// Root health check for Render
+@Controller()
+export class RootController {
+  @Get()
+  @Public()
+  healthCheck() {
+    return { status: 'ok', message: 'API is running. Visit /api/docs for documentation.' };
+  }
+}
 
 @Module({
   imports: [
@@ -114,5 +125,6 @@ import { QueuesModule } from './queues/queues.module';
     // Background jobs
     QueuesModule,
   ],
+  controllers: [RootController],
 })
 export class AppModule {}
