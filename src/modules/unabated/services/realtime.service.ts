@@ -68,12 +68,14 @@ export class RealtimeService implements OnModuleDestroy {
   private async connect(): Promise<void> {
     const url = this.buildWebSocketUrl();
     this.ws = new WebSocket(url, {
-      protocol: 'graphql-ws',
+      headers: {
+        'Sec-WebSocket-Protocol': 'graphql-ws',
+      },
     });
 
     return new Promise((resolve, reject) => {
       this.ws.on('open', () => {
-        this.logger.log('WebSocket connected');
+        this.logger.log('✅ WebSocket connected!');
         this.reconnectAttempts = 0;
         this.sendConnectionInit();
       });
@@ -81,9 +83,11 @@ export class RealtimeService implements OnModuleDestroy {
       this.ws.on('message', async (data: WebSocket.Data) => {
         try {
           const parsed = JSON.parse(data.toString());
+          this.logger.debug(`WebSocket message received: ${JSON.stringify(parsed)}`);
           await this.handleMessage(parsed);
         } catch (error) {
           this.logger.warn(`Failed to parse message: ${error.message}`);
+          this.logger.warn(`Raw message: ${data.toString()}`);
         }
       });
 
@@ -92,10 +96,10 @@ export class RealtimeService implements OnModuleDestroy {
         reject(error);
       });
 
-      this.ws.on('close', () => {
-        this.logger.warn('WebSocket closed');
+      this.ws.on('close', (code, reason) => {
+        this.logger.warn(`WebSocket closed - Code: ${code}, Reason: ${reason.toString()}`);
         if (this.running) {
-          reject(new Error('WebSocket closed unexpectedly'));
+          reject(new Error(`WebSocket closed unexpectedly - Code: ${code}, Reason: ${reason.toString()}`));
         } else {
           resolve();
         }
@@ -113,6 +117,7 @@ export class RealtimeService implements OnModuleDestroy {
         },
       },
     };
+    this.logger.log(`📤 Sent connection_init to ${this.apiHost}`);
     this.ws.send(JSON.stringify(message));
   }
 
@@ -164,6 +169,7 @@ export class RealtimeService implements OnModuleDestroy {
       },
     };
 
+    this.logger.log(`📤 Sent subscription start (ID: ${this.subscriptionId})`);
     this.ws.send(JSON.stringify(subscription));
   }
 
@@ -172,16 +178,20 @@ export class RealtimeService implements OnModuleDestroy {
 
     switch (msgType) {
       case 'connection_ack':
-        this.logger.log('Connection acknowledged');
+        this.logger.log('✅ Connection acknowledged!');
+        if (message.payload?.connectionTimeoutMs) {
+          this.logger.log(`   Timeout: ${message.payload.connectionTimeoutMs}ms`);
+        }
         this.startSubscription();
         break;
 
       case 'start_ack':
-        this.logger.log('Subscription acknowledged');
+        this.logger.log(`✅ Subscription acknowledged! ID: ${message.id}`);
+        this.logger.log('   Now receiving market updates...');
         break;
 
       case 'ka':
-        // Keepalive - no action needed
+        this.logger.debug('💓 Keepalive');
         break;
 
       case 'data':
@@ -204,11 +214,13 @@ export class RealtimeService implements OnModuleDestroy {
   }
 
   private async processMarketLineUpdate(update: RealtimeMessage): Promise<void> {
-    const { leagueId, messageId, marketLines } = update;
+    const { leagueId, messageId, messageTimestamp, marketLines } = update;
 
-    this.logger.debug(
-      `Processing update: league=${leagueId}, message=${messageId}, lines=${marketLines.length}`,
-    );
+    this.logger.log('📊 Market Update:');
+    this.logger.log(`   League: ${leagueId}`);
+    this.logger.log(`   Lines: ${marketLines.length}`);
+    this.logger.log(`   Message: ${messageId}`);
+    this.logger.log(`   Timestamp: ${messageTimestamp}`);
 
     for (const line of marketLines) {
       if (this.marketLineHandler) {
