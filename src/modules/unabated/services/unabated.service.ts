@@ -178,7 +178,7 @@ export class UnabatedService implements OnModuleInit {
   }
 
   private async handleMarketLineUpdate(update: MarketLineUpdate): Promise<void> {
-    const marketLineId = update.marketLineId;
+    const marketLineId = String(update.marketLineId); // Convert to string for Prisma
 
     // Get existing line for history tracking
     const existing = await this.prisma.marketLine.findUnique({
