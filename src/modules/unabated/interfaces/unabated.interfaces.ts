@@ -13,7 +13,7 @@ export interface BetTypeRaw {
   name: string;
   description?: string;
   betOn?: string;
-  sides?: number;
+  sides?: number | string; // Can be a number or string like "ou", "ml"
   canDraw?: boolean;
   hasPoints?: boolean;
   selectionCount?: number;

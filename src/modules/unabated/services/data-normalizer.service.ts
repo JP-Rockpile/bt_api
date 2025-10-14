@@ -11,7 +11,7 @@ export class DataNormalizerService {
       name: raw.name,
       description: raw.description || null,
       betOn: raw.betOn || null,
-      sides: raw.sides || null,
+      sides: this.normalizeSidesField(raw.sides),
       canDraw: raw.canDraw || false,
       hasPoints: raw.hasPoints || false,
       selectionCount: raw.selectionCount || null,
@@ -19,6 +19,34 @@ export class DataNormalizerService {
       isFuture: raw.isFuture || false,
       modifiedOn: raw.modifiedOn ? new Date(raw.modifiedOn) : null,
     };
+  }
+
+  /**
+   * Normalize the sides field to an integer or null
+   * Handles cases where the API returns strings like "ou" instead of numbers
+   */
+  private normalizeSidesField(sides: any): number | null {
+    if (sides === null || sides === undefined) {
+      return null;
+    }
+    
+    // If it's already a number, return it
+    if (typeof sides === 'number') {
+      return sides;
+    }
+    
+    // If it's a string that can be converted to a number
+    if (typeof sides === 'string') {
+      const parsed = parseInt(sides, 10);
+      if (!isNaN(parsed)) {
+        return parsed;
+      }
+      // For string values like "ou", "ml", etc., return null
+      this.logger.warn(`Received non-numeric sides value: "${sides}", storing as null`);
+      return null;
+    }
+    
+    return null;
   }
 
   normalizeMarketSource(raw: MarketSourceRaw) {
