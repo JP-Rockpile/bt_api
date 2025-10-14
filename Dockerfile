@@ -1,4 +1,5 @@
 # Multi-stage build for optimized production image
+# Updated: 2025-10-14 - Force rebuild for WebSocket fixes
 
 # Stage 1: Builder
 FROM node:20-slim AS builder
