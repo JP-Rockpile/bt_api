@@ -67,11 +67,8 @@ export class RealtimeService implements OnModuleDestroy {
 
   private async connect(): Promise<void> {
     const url = this.buildWebSocketUrl();
-    this.ws = new WebSocket(url, {
-      headers: {
-        'Sec-WebSocket-Protocol': 'graphql-ws',
-      },
-    });
+    // Use the protocols array (second parameter) for the ws library
+    this.ws = new WebSocket(url, ['graphql-ws']);
 
     return new Promise((resolve, reject) => {
       this.ws.on('open', () => {
