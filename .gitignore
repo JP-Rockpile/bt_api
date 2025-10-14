@@ -39,7 +39,7 @@ lerna-debug.log*
 .env.development.local
 .env.test.local
 .env.production.local
-.npmrc
+# .npmrc is safe to commit (uses ${NODE_AUTH_TOKEN} placeholder)
 
 # Prisma
 prisma/migrations/.migrate_lock
