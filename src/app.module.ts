@@ -102,11 +102,14 @@ export class RootController {
         if (process.env.REDIS_URL) {
           try {
             const url = new URL(process.env.REDIS_URL);
+            const isSSL = url.protocol === 'rediss:';
             return {
               host: url.hostname,
               port: parseInt(url.port) || 6379,
               password: url.password || undefined,
               db: parseInt(url.pathname.slice(1)) || 0,
+              // Add TLS config for rediss:// URLs
+              ...(isSSL ? { tls: {} } : {}),
             };
           } catch {
             // Fall through to individual variables
