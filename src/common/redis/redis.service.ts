@@ -22,11 +22,14 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
         };
 
     this.client = new Redis(connectionConfig, {
+      // Avoid connection storms on startup / rate-limited providers
+      lazyConnect: true,
       retryStrategy: (times: number) => {
-        const delay = Math.min(times * 50, 2000);
+        // Exponential backoff up to 30s
+        const delay = Math.min(1000 * Math.pow(2, times), 30000);
         return delay;
       },
-      maxRetriesPerRequest: 3,
+      maxRetriesPerRequest: 1,
       enableReadyCheck: true,
     });
 
@@ -41,6 +44,9 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
 
   async onModuleInit() {
     try {
+      // Stagger initial connect to reduce concurrent AUTH bursts
+      await new Promise((resolve) => setTimeout(resolve, 1500));
+      await this.client.connect();
       await this.client.ping();
       this.logger.log('Redis client initialized successfully');
     } catch (error) {
