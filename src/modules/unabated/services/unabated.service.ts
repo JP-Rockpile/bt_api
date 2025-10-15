@@ -37,37 +37,41 @@ export class UnabatedService implements OnModuleInit {
     }
 
     this.logger.log('🚀 Initializing Unabated integration...');
+    this.logger.log('⚡ Deferring Unabated initialization to background (non-blocking)');
 
-    try {
-      const bootstrapOnStartup = this.configService.get<boolean>(
-        'UNABATED_BOOTSTRAP_ON_STARTUP',
-        false,
-      );
+    // Run initialization in background to not block server startup
+    setImmediate(async () => {
+      try {
+        const bootstrapOnStartup = this.configService.get<boolean>(
+          'UNABATED_BOOTSTRAP_ON_STARTUP',
+          false,
+        );
 
-      if (bootstrapOnStartup) {
-        this.logger.log('📦 Bootstrap enabled - fetching initial data...');
-        // Bootstrap on startup
-        await this.bootstrap();
+        if (bootstrapOnStartup) {
+          this.logger.log('📦 Bootstrap enabled - fetching initial data...');
+          // Bootstrap on startup
+          await this.bootstrap();
 
-        // Small delay to ensure database writes have settled
-        this.logger.log('⏳ Waiting 2 seconds before starting real-time feed...');
-        await new Promise(resolve => setTimeout(resolve, 2000));
-      } else {
-        this.logger.log('⏭️ Bootstrap disabled on startup');
-        this.logger.log('💡 Use POST /api/v1/unabated/sync to manually sync data');
-        // Still sync bet types as they're lightweight and needed for real-time
-        await this.syncBetTypes();
+          // Small delay to ensure database writes have settled
+          this.logger.log('⏳ Waiting 2 seconds before starting real-time feed...');
+          await new Promise(resolve => setTimeout(resolve, 2000));
+        } else {
+          this.logger.log('⏭️ Bootstrap disabled on startup');
+          this.logger.log('💡 Use POST /api/v1/unabated/sync to manually sync data');
+          // Still sync bet types as they're lightweight and needed for real-time
+          await this.syncBetTypes();
+        }
+
+        // Start real-time subscriptions
+        await this.startRealtime();
+
+        this.logger.log('✅ Unabated integration ready');
+      } catch (error) {
+        this.logger.error(`Failed to initialize: ${error.message}`);
+        // Don't throw - allow app to start even if Unabated fails
+        this.logger.warn('⚠️  Unabated integration failed - data sync will be unavailable');
       }
-
-      // Start real-time subscriptions
-      await this.startRealtime();
-
-      this.logger.log('✅ Unabated integration ready');
-    } catch (error) {
-      this.logger.error(`Failed to initialize: ${error.message}`);
-      // Don't throw - allow app to start even if Unabated fails
-      this.logger.warn('⚠️  App starting without Unabated integration');
-    }
+    });
   }
 
   /**
