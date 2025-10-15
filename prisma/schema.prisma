@@ -9,7 +9,6 @@ generator client {
 datasource db {
   provider   = "postgresql"
   url        = env("DATABASE_URL")
-  directUrl  = env("DIRECT_URL") // Optional: falls back to url if not set
   extensions = [pgvector(map: "vector")]
 }
 

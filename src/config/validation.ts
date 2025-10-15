@@ -22,7 +22,6 @@ export const validationSchema = Joi.object({
 
   // Database
   DATABASE_URL: Joi.string().required(),
-  DIRECT_URL: Joi.string().optional(), // Optional: falls back to DATABASE_URL in Prisma
   DATABASE_POOL_SIZE: Joi.number().default(10),
 
   // Redis
