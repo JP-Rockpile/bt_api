@@ -59,6 +59,10 @@ COPY --from=builder --chown=nestjs:nodejs /app/node_modules ./node_modules
 COPY --from=builder --chown=nestjs:nodejs /app/package*.json ./
 COPY --from=builder --chown=nestjs:nodejs /app/prisma ./prisma
 
+# Copy startup script
+COPY --chown=nestjs:nodejs start.sh ./
+RUN chmod +x start.sh
+
 # Switch to non-root user
 USER nestjs
 
@@ -72,5 +76,5 @@ ENTRYPOINT ["dumb-init", "--"]
 HEALTHCHECK --interval=30s --timeout=3s --start-period=40s --retries=3 \
   CMD node -e "require('http').get('http://localhost:3000/api/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"
 
-# Start application (run migrations first, then start server)
-CMD sh -c "npx prisma migrate deploy && node dist/main.js"
+# Start application (migrations run at runtime via start.sh)
+CMD ["./start.sh"]
