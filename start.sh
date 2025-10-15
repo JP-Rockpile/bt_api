@@ -1,4 +1,5 @@
 #!/bin/sh
+export DATABASE_URL='postgresql://bt_app_postgres_user:CwTxsiSGCnJtyA66sPKMNfpQSAvGFhHQ@dpg-d3nca46r433s73bf6plg-a-internal.render.com:5432/bt_app_postgres?sslmode=require&schema=public'
 set -e
 
 echo "🔄 Running database migrations..."
