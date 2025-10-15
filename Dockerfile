@@ -43,10 +43,13 @@ FROM node:20-slim
 
 WORKDIR /app
 
-# Install runtime dependencies including OpenSSL
+# Install runtime dependencies including OpenSSL and network tools for debugging
 RUN apt-get update && apt-get install -y \
     openssl \
     dumb-init \
+    netcat-openbsd \
+    dnsutils \
+    iputils-ping \
     && rm -rf /var/lib/apt/lists/*
 
 # Create non-root user
