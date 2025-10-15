@@ -38,8 +38,9 @@ export class UnabatedService implements OnModuleInit {
 
       this.logger.log('✅ Unabated integration ready');
     } catch (error) {
-      this.logger.error(`Failed to initialize: ${error.message}`);
-      throw error;
+      // Don't throw - allow app to start even if Unabated is unavailable
+      this.logger.warn(`⚠️  Unabated initialization failed (non-fatal): ${error.message}`);
+      this.logger.warn('⚠️  App will continue without Unabated integration');
     }
   }
 

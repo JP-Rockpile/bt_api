@@ -30,10 +30,8 @@ export class ChatService {
       messageCount = 1;
       lastMessageAt = now;
 
-      // TODO: Remove this placeholder once LLM is hooked up
-      // Create a simple assistant response for now
-      await this.createMessage(userId, conversationId, 'ASSISTANT', 'hi');
-      messageCount = 2;
+      // NOTE: The assistant response will be sent via SSE by the controller
+      // and persisted asynchronously. Don't create placeholder here.
     }
 
     // Return conversation in the format expected by mobile app

@@ -22,15 +22,28 @@ async function bootstrap() {
   // Use Pino logger
   app.useLogger(app.get(Logger));
 
-  // Security middleware
-  app.use(helmet());
+  // Security middleware - Configure helmet to allow SSE streams
+  app.use(
+    helmet({
+      contentSecurityPolicy: false, // Allow SSE connections
+      crossOriginEmbedderPolicy: false, // Allow streaming responses
+    }),
+  );
 
   // CORS configuration
   app.enableCors({
     origin: process.env.CORS_ORIGINS?.split(',') || ['http://localhost:19006'],
     credentials: process.env.CORS_CREDENTIALS === 'true',
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'Idempotency-Key', 'X-Request-ID'],
+    allowedHeaders: [
+      'Content-Type',
+      'Authorization',
+      'Idempotency-Key',
+      'X-Request-ID',
+      'Cache-Control',
+      'X-Accel-Buffering',
+    ],
+    exposedHeaders: ['Content-Type', 'Cache-Control', 'Connection'],
   });
 
   // Global prefix and versioning

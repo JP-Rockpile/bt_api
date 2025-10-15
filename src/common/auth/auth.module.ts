@@ -6,6 +6,7 @@ import { RolesGuard } from './guards/roles.guard';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { ServiceAuthGuard } from './guards/service-auth.guard';
 import { FlexibleAuthGuard } from './guards/flexible-auth.guard';
+import { SseAuthGuard } from './guards/sse-auth.guard';
 import { UsersModule } from '../../modules/users/users.module';
 
 @Module({
@@ -14,7 +15,21 @@ import { UsersModule } from '../../modules/users/users.module';
     JwtModule.register({}), // Configuration handled by Auth0Strategy
     forwardRef(() => UsersModule),
   ],
-  providers: [Auth0Strategy, RolesGuard, JwtAuthGuard, ServiceAuthGuard, FlexibleAuthGuard],
-  exports: [PassportModule, RolesGuard, JwtAuthGuard, ServiceAuthGuard, FlexibleAuthGuard],
+  providers: [
+    Auth0Strategy,
+    RolesGuard,
+    JwtAuthGuard,
+    ServiceAuthGuard,
+    FlexibleAuthGuard,
+    SseAuthGuard,
+  ],
+  exports: [
+    PassportModule,
+    RolesGuard,
+    JwtAuthGuard,
+    ServiceAuthGuard,
+    FlexibleAuthGuard,
+    SseAuthGuard,
+  ],
 })
 export class AuthModule {}
