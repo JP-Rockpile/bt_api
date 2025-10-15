@@ -1,4 +1,5 @@
 # Multi-stage build for optimized production image
+# Updated: 2025-10-14 - Force rebuild for WebSocket fixes
 
 # Stage 1: Builder
 FROM node:20-slim AS builder
@@ -34,18 +35,21 @@ RUN npx prisma generate
 # Build application
 RUN npm run build
 
-# Remove dev dependencies
-RUN npm prune --production
+# Remove dev dependencies (using modern flag)
+RUN npm prune --omit=dev
 
 # Stage 2: Production
 FROM node:20-slim
 
 WORKDIR /app
 
-# Install runtime dependencies including OpenSSL
+# Install runtime dependencies including OpenSSL and network tools for debugging
 RUN apt-get update && apt-get install -y \
     openssl \
     dumb-init \
+    netcat-openbsd \
+    dnsutils \
+    iputils-ping \
     && rm -rf /var/lib/apt/lists/*
 
 # Create non-root user
@@ -57,6 +61,10 @@ COPY --from=builder --chown=nestjs:nodejs /app/dist ./dist
 COPY --from=builder --chown=nestjs:nodejs /app/node_modules ./node_modules
 COPY --from=builder --chown=nestjs:nodejs /app/package*.json ./
 COPY --from=builder --chown=nestjs:nodejs /app/prisma ./prisma
+
+# Copy startup script
+COPY --chown=nestjs:nodejs start.sh ./
+RUN chmod +x start.sh
 
 # Switch to non-root user
 USER nestjs
@@ -71,5 +79,5 @@ ENTRYPOINT ["dumb-init", "--"]
 HEALTHCHECK --interval=30s --timeout=3s --start-period=40s --retries=3 \
   CMD node -e "require('http').get('http://localhost:3000/api/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"
 
-# Start application
-CMD ["node", "dist/main.js"]
+# Start application (migrations run at runtime via start.sh)
+CMD ["./start.sh"]

@@ -10,18 +10,27 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
   constructor(private configService: ConfigService) {
     const redisConfig = this.configService.get('redis');
 
-    this.client = new Redis({
-      host: redisConfig.host,
-      port: redisConfig.port,
-      password: redisConfig.password,
-      db: redisConfig.db,
+    // Use REDIS_URL if provided, otherwise fall back to individual config
+    const connectionConfig = redisConfig.url && redisConfig.url !== 'redis://localhost:6379'
+      ? redisConfig.url
+      : {
+          host: redisConfig.host,
+          port: redisConfig.port,
+          password: redisConfig.password,
+          db: redisConfig.db,
+          ...(redisConfig.tls ? { tls: {} } : {}),
+        };
+
+    this.client = new Redis(connectionConfig, {
+      // Avoid connection storms on startup / rate-limited providers
+      lazyConnect: true,
       retryStrategy: (times: number) => {
-        const delay = Math.min(times * 50, 2000);
+        // Exponential backoff up to 30s
+        const delay = Math.min(1000 * Math.pow(2, times), 30000);
         return delay;
       },
-      maxRetriesPerRequest: 3,
-      enableReadyCheck: true,
-      ...(redisConfig.tls ? { tls: {} } : {}),
+      maxRetriesPerRequest: null, // Required by BullMQ for blocking operations
+      enableReadyCheck: false, // Disable to avoid conflicts with blocking ops
     });
 
     this.client.on('error', (error) => {
@@ -35,10 +44,21 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
 
   async onModuleInit() {
     try {
+      // Reduce delay to avoid Render port timeout (was 1500ms)
+      await new Promise((resolve) => setTimeout(resolve, 100));
+      
+      // Add timeout to Redis connection to avoid hanging
+      const connectPromise = this.client.connect();
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Redis connection timeout')), 5000)
+      );
+      
+      await Promise.race([connectPromise, timeoutPromise]);
       await this.client.ping();
       this.logger.log('Redis client initialized successfully');
     } catch (error) {
       this.logger.warn('Redis connection failed - running in degraded mode', error);
+      // App continues to function without Redis for basic operations
     }
   }
 

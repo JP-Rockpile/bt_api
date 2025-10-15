@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, Controller, Get } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { LoggerModule } from 'nestjs-pino';
 import { ThrottlerModule } from '@nestjs/throttler';
@@ -12,6 +12,7 @@ import { validationSchema } from './config/validation';
 // Core modules
 import { DatabaseModule } from './common/database/database.module';
 import { RedisModule } from './common/redis/redis.module';
+import { RedisService } from './common/redis/redis.service';
 import { AuthModule } from './common/auth/auth.module';
 
 // Feature modules
@@ -28,6 +29,17 @@ import { UnabatedModule } from './modules/unabated/unabated.module';
 
 // Queue modules
 import { QueuesModule } from './queues/queues.module';
+import { Public } from './common/auth/decorators/public.decorator';
+
+// Root health check for Render
+@Controller()
+export class RootController {
+  @Get()
+  @Public()
+  healthCheck() {
+    return { status: 'ok', message: 'API is running. Visit /api/docs for documentation.' };
+  }
+}
 
 @Module({
   imports: [
@@ -84,14 +96,13 @@ import { QueuesModule } from './queues/queues.module';
       },
     ]),
 
-    // BullMQ job queues
-    BullModule.forRoot({
-      connection: {
-        host: process.env.REDIS_HOST || 'localhost',
-        port: parseInt(process.env.REDIS_PORT || '6379', 10),
-        password: process.env.REDIS_PASSWORD || undefined,
-        db: parseInt(process.env.REDIS_DB || '0', 10),
-      },
+    // BullMQ job queues - reuse the shared Redis client to avoid connection storms
+    BullModule.forRootAsync({
+      imports: [RedisModule],
+      inject: [RedisService],
+      useFactory: (redisService: RedisService) => ({
+        connection: redisService.getClient(),
+      }),
     }),
 
     // Core infrastructure
@@ -114,5 +125,6 @@ import { QueuesModule } from './queues/queues.module';
     // Background jobs
     QueuesModule,
   ],
+  controllers: [RootController],
 })
 export class AppModule {}

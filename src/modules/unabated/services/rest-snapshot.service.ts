@@ -96,20 +96,42 @@ export class RestSnapshotService {
       const sources = response.data?.data || response.data?.sources || response.data;
 
       if (!Array.isArray(sources)) {
-        this.logger.warn('Unexpected sources response format');
+        this.logger.warn(
+          `Unexpected sources response format for ${league}/${marketType}: ` +
+          `${JSON.stringify(response.data).substring(0, 200)}...`
+        );
+        
+        // Try to extract from nested structure
+        if (response.data && typeof response.data === 'object') {
+          // Check if it's an error response
+          if (response.data.error || response.data.message) {
+            this.logger.warn(`API error: ${response.data.error || response.data.message}`);
+            return [];
+          }
+          
+          // Check for other possible nested locations
+          const possibleSources = Object.values(response.data).find(val => Array.isArray(val));
+          if (possibleSources && Array.isArray(possibleSources)) {
+            this.logger.log(`Found sources in alternate location, ${possibleSources.length} sources`);
+            return possibleSources as MarketSourceRaw[];
+          }
+        }
+        
         return [];
       }
 
       this.logger.log(`Fetched ${sources.length} market sources`);
       return sources;
     } catch (error) {
-      this.logger.error(`Failed to fetch market sources: ${error.message}`);
-      throw error;
+      this.logger.error(`Failed to fetch market sources for ${league}/${marketType}: ${error.message}`);
+      // Don't throw - allow sync to continue for other leagues
+      return [];
     }
   }
 
   getAvailableLeagues(): string[] {
-    // Default leagues - you can enhance this by fetching from API
-    return ['NFL', 'NBA', 'MLB', 'NHL', 'NCAAF', 'NCAAB', 'UFC', 'SOCCER', 'TENNIS'];
+    // Leagues supported by Unabated API
+    // TODO: Update this list based on actual Unabated supported leagues
+    return ['NFL', 'CFB', 'NBA', 'CBB', 'MLB', 'NHL', 'WNBA', 'PGA'];
   }
 }

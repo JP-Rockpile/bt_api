@@ -45,15 +45,26 @@ export class PrismaService
   }
 
   async onModuleInit() {
-    await this.$connect();
-    this.logger.log('Database connected successfully');
-
-    // Enable pgvector extension
     try {
-      await this.$executeRawUnsafe('CREATE EXTENSION IF NOT EXISTS vector');
-      this.logger.log('pgvector extension enabled');
+      // Add timeout to database connection to avoid hanging during startup
+      const connectPromise = this.$connect();
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Database connection timeout')), 10000)
+      );
+      
+      await Promise.race([connectPromise, timeoutPromise]);
+      this.logger.log('Database connected successfully');
+
+      // Enable pgvector extension
+      try {
+        await this.$executeRawUnsafe('CREATE EXTENSION IF NOT EXISTS vector');
+        this.logger.log('pgvector extension enabled');
+      } catch (error) {
+        this.logger.error('Failed to enable pgvector extension', error);
+      }
     } catch (error) {
-      this.logger.error('Failed to enable pgvector extension', error);
+      this.logger.error('Database connection failed during startup', error);
+      throw error; // Database is critical, so re-throw to prevent app from starting
     }
   }
 

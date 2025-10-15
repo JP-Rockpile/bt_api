@@ -505,7 +505,7 @@ model BetType {
   name           String
   description    String?
   betOn          String?   @map("bet_on")
-  sides          Int?
+  sides          String?   // Changed from Int to String to handle values like "ou", "ml", "player", etc.
   canDraw        Boolean?  @default(false) @map("can_draw")
   hasPoints      Boolean?  @default(false) @map("has_points")
   selectionCount Int?      @map("selection_count")
@@ -606,6 +606,7 @@ model MarketLine {
   isProp      Boolean  @default(false) @map("is_prop")
   playerId    String?  @map("player_id")
   betTypeId   Int?     @map("bet_type_id")
+  betSubType  String?  @map("bet_sub_type")
   updatedAt   DateTime @updatedAt @map("updated_at")
   createdAt   DateTime @default(now()) @map("created_at")
 
@@ -619,6 +620,7 @@ model MarketLine {
   @@index([sourceId])
   @@index([marketType])
   @@index([updatedAt])
+  @@index([playerId])
   @@map("market_lines")
 }
 
