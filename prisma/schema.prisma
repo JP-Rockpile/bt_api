@@ -505,7 +505,7 @@ model BetType {
   name           String
   description    String?
   betOn          String?   @map("bet_on")
-  sides          Int?
+  sides          String?   // Changed from Int to String to handle values like "ou", "ml", "player", etc.
   canDraw        Boolean?  @default(false) @map("can_draw")
   hasPoints      Boolean?  @default(false) @map("has_points")
   selectionCount Int?      @map("selection_count")

@@ -22,31 +22,16 @@ export class DataNormalizerService {
   }
 
   /**
-   * Normalize the sides field to an integer or null
-   * Handles cases where the API returns strings like "ou" instead of numbers
+   * Normalize the sides field to a string or null
+   * Handles both numeric and string values from the API
    */
-  private normalizeSidesField(sides: any): number | null {
+  private normalizeSidesField(sides: any): string | null {
     if (sides === null || sides === undefined) {
       return null;
     }
     
-    // If it's already a number, return it
-    if (typeof sides === 'number') {
-      return sides;
-    }
-    
-    // If it's a string that can be converted to a number
-    if (typeof sides === 'string') {
-      const parsed = parseInt(sides, 10);
-      if (!isNaN(parsed)) {
-        return parsed;
-      }
-      // For string values like "ou", "ml", etc., return null
-      this.logger.warn(`Received non-numeric sides value: "${sides}", storing as null`);
-      return null;
-    }
-    
-    return null;
+    // Convert to string (handles both numbers and strings)
+    return String(sides);
   }
 
   normalizeMarketSource(raw: MarketSourceRaw) {

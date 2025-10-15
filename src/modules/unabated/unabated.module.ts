@@ -6,9 +6,11 @@ import { RestSnapshotService } from './services/rest-snapshot.service';
 import { RealtimeService } from './services/realtime.service';
 import { DataNormalizerService } from './services/data-normalizer.service';
 import { MarketParserService } from './services/market-parser.service';
+import { UnabatedController } from './unabated.controller';
 
 @Module({
   imports: [ConfigModule, PrismaModule],
+  controllers: [UnabatedController],
   providers: [
     UnabatedService,
     RestSnapshotService,

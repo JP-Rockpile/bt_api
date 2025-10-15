@@ -24,6 +24,15 @@ export class UnabatedService implements OnModuleInit {
     // Skip Unabated initialization in test environment or when disabled
     if (process.env.NODE_ENV === 'test' || process.env.DISABLE_UNABATED_STARTUP === 'true') {
       this.logger.log('⏭️  Skipping Unabated initialization (disabled or test environment)');
+      // Still start real-time subscriptions (lightweight)
+      if (process.env.NODE_ENV !== 'test') {
+        try {
+          await this.startRealtime();
+          this.logger.log('✅ Real-time subscriptions started (bootstrap skipped)');
+        } catch (error) {
+          this.logger.warn(`⚠️  Failed to start real-time: ${error.message}`);
+        }
+      }
       return;
     }
 
@@ -41,6 +50,62 @@ export class UnabatedService implements OnModuleInit {
       this.logger.error(`Failed to initialize: ${error.message}`);
       // Don't throw - allow app to start even if Unabated fails
       this.logger.warn('⚠️  App starting without Unabated integration');
+    }
+  }
+
+  /**
+   * Public method to manually trigger data sync
+   * Can be called from a controller endpoint or cron job
+   */
+  async syncData(leagues?: string[]): Promise<{
+    betTypes: number;
+    sources: number;
+    events: number;
+    lines: number;
+  }> {
+    this.logger.log('🔄 Starting manual data sync...');
+    
+    const stats = {
+      betTypes: 0,
+      sources: 0,
+      events: 0,
+      lines: 0,
+    };
+
+    try {
+      // 1. Sync bet types
+      const betTypes = await this.restSnapshot.fetchBetTypes();
+      stats.betTypes = betTypes.length;
+      await this.storeBetTypes(betTypes);
+
+      // 2. Sync market sources
+      const sources = await this.restSnapshot.fetchMarketSources();
+      stats.sources = sources.length;
+      await this.storeMarketSources(sources);
+
+      // 3. Sync events and lines for each league
+      const leaguesToSync = leagues || this.restSnapshot.getAvailableLeagues();
+      
+      for (const league of leaguesToSync) {
+        const marketTypes = this.restSnapshot.getMarketTypesForLeague(league);
+        
+        for (const marketType of marketTypes) {
+          const snapshot = await this.restSnapshot.fetchMarketSnapshot(league, marketType);
+          const { events, lines } = this.marketParser.parseSnapshot(snapshot, league);
+          
+          await this.storeEvents(events);
+          await this.storeMarketLines(lines);
+          
+          stats.events += events.length;
+          stats.lines += lines.length;
+        }
+      }
+
+      this.logger.log(`✅ Sync complete: ${stats.events} events, ${stats.lines} lines`);
+      return stats;
+    } catch (error) {
+      this.logger.error(`Sync failed: ${error.message}`);
+      throw error;
     }
   }
 
@@ -179,38 +244,85 @@ export class UnabatedService implements OnModuleInit {
   }
 
   private async handleMarketLineUpdate(update: MarketLineUpdate): Promise<void> {
-    const marketLineId = String(update.marketLineId); // Convert to string for Prisma
+    try {
+      const marketLineId = String(update.marketLineId); // Convert to string for Prisma
+      const eventId = update.marketLineKey?.split(':')[0];
 
-    const newPrice = update.price;
-    const newPoint = update.points;
-    const updatedAt = update.modifiedOn ? new Date(update.modifiedOn) : new Date();
+      if (!eventId) {
+        this.logger.warn(`Market line ${marketLineId} has no eventId, skipping`);
+        return;
+      }
 
-    // Calculate decimal odds if needed
-    let decimalOdds = update.sourceFormat === 2 ? update.sourcePrice : null;
-    if (!decimalOdds && newPrice) {
-      decimalOdds = newPrice > 0 ? newPrice / 100 + 1 : 100 / Math.abs(newPrice) + 1;
+      // Check if event exists, create placeholder if it doesn't
+      let event = await this.prisma.event.findUnique({
+        where: { id: eventId },
+        select: { id: true },
+      });
+
+      if (!event) {
+        // Create a placeholder event for the market line
+        // This will be enriched later during periodic sync
+        try {
+          event = await this.prisma.event.create({
+            data: {
+              id: eventId,
+              sportType: 'unknown', // Will be updated during next sync
+              league: 'unknown', // Will be updated during next sync
+              homeTeam: 'TBD',
+              awayTeam: 'TBD',
+              scheduledTime: new Date(), // Placeholder
+              status: 'scheduled',
+            },
+            select: { id: true },
+          });
+          this.logger.debug(`Created placeholder event ${eventId} from market line update`);
+        } catch (error) {
+          // Event might have been created by another concurrent update, try to fetch again
+          event = await this.prisma.event.findUnique({
+            where: { id: eventId },
+            select: { id: true },
+          });
+          if (!event) {
+            this.logger.warn(`Failed to create or find event ${eventId}, skipping market line`);
+            return;
+          }
+        }
+      }
+
+      const newPrice = update.price;
+      const newPoint = update.points;
+      const updatedAt = update.modifiedOn ? new Date(update.modifiedOn) : new Date();
+
+      // Calculate decimal odds if needed
+      let decimalOdds = update.sourceFormat === 2 ? update.sourcePrice : null;
+      if (!decimalOdds && newPrice) {
+        decimalOdds = newPrice > 0 ? newPrice / 100 + 1 : 100 / Math.abs(newPrice) + 1;
+      }
+
+      // Update or create market line
+      await this.prisma.marketLine.upsert({
+        where: { id: marketLineId },
+        update: {
+          price: newPrice,
+          point: newPoint,
+          decimalOdds,
+          updatedAt,
+        },
+        create: {
+          id: marketLineId,
+          eventId: eventId,
+          sourceId: String(update.marketSourceId),
+          marketType: 'straight', // You may need to parse this from marketLineKey
+          outcome: null,
+          price: newPrice,
+          point: newPoint,
+          decimalOdds,
+          updatedAt,
+        },
+      });
+    } catch (error) {
+      // Don't let market line errors crash the app
+      this.logger.error(`Error in market line handler: ${error.message}`);
     }
-
-    // Update or create market line
-    await this.prisma.marketLine.upsert({
-      where: { id: marketLineId },
-      update: {
-        price: newPrice,
-        point: newPoint,
-        decimalOdds,
-        updatedAt,
-      },
-      create: {
-        id: marketLineId,
-        eventId: update.marketLineKey?.split(':')[0] || 'unknown', // Parse from key
-        sourceId: String(update.marketSourceId),
-        marketType: 'straight', // You may need to parse this from marketLineKey
-        outcome: null,
-        price: newPrice,
-        point: newPoint,
-        decimalOdds,
-        updatedAt,
-      },
-    });
   }
 }
