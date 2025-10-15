@@ -29,8 +29,8 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
         const delay = Math.min(1000 * Math.pow(2, times), 30000);
         return delay;
       },
-      maxRetriesPerRequest: 1,
-      enableReadyCheck: true,
+      maxRetriesPerRequest: null, // Required by BullMQ for blocking operations
+      enableReadyCheck: false, // Disable to avoid conflicts with blocking ops
     });
 
     this.client.on('error', (error) => {
