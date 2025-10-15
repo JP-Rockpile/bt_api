@@ -19,10 +19,12 @@ async function bootstrap() {
     }
 
     console.log('📦 Creating NestJS application...');
+    const createAppStart = Date.now();
     const app = await NestFactory.create(AppModule, {
       bufferLogs: true,
     });
-    console.log('✅ NestJS application created');
+    const createAppDuration = Date.now() - createAppStart;
+    console.log(`✅ NestJS application created (took ${createAppDuration}ms)`);
 
   // Use Pino logger
   app.useLogger(app.get(Logger));
@@ -120,7 +122,21 @@ async function bootstrap() {
     const host = process.env.HOST || '0.0.0.0'; // Bind to all interfaces for production
     
     console.log(`🌐 Attempting to listen on ${host}:${port}...`);
-    await app.listen(port, host);
+    
+    // Add timeout to detect hanging listen
+    const listenTimeout = setTimeout(() => {
+      console.error('⚠️ WARNING: app.listen() is taking longer than 10 seconds');
+    }, 10000);
+    
+    try {
+      await app.listen(port, host);
+      clearTimeout(listenTimeout);
+      console.log(`✅ Successfully bound to ${host}:${port}`);
+    } catch (listenError) {
+      clearTimeout(listenTimeout);
+      console.error('❌ Failed to bind to port:', listenError);
+      throw listenError;
+    }
 
     const logger = app.get(Logger);
     logger.log(`🚀 Application is running on: http://${host}:${port}/${apiPrefix}`);

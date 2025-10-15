@@ -44,13 +44,21 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
 
   async onModuleInit() {
     try {
-      // Stagger initial connect to reduce concurrent AUTH bursts
-      await new Promise((resolve) => setTimeout(resolve, 1500));
-      await this.client.connect();
+      // Reduce delay to avoid Render port timeout (was 1500ms)
+      await new Promise((resolve) => setTimeout(resolve, 100));
+      
+      // Add timeout to Redis connection to avoid hanging
+      const connectPromise = this.client.connect();
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Redis connection timeout')), 5000)
+      );
+      
+      await Promise.race([connectPromise, timeoutPromise]);
       await this.client.ping();
       this.logger.log('Redis client initialized successfully');
     } catch (error) {
       this.logger.warn('Redis connection failed - running in degraded mode', error);
+      // App continues to function without Redis for basic operations
     }
   }
 

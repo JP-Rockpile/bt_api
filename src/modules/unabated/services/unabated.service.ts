@@ -42,6 +42,10 @@ export class UnabatedService implements OnModuleInit {
       // Bootstrap on startup
       await this.bootstrap();
 
+      // Small delay to ensure database writes have settled
+      this.logger.log('⏳ Waiting 2 seconds before starting real-time feed...');
+      await new Promise(resolve => setTimeout(resolve, 2000));
+
       // Start real-time subscriptions
       await this.startRealtime();
 
@@ -133,17 +137,27 @@ export class UnabatedService implements OnModuleInit {
     }
 
     // 3. Fetch initial snapshots
+    let successCount = 0;
+    let failCount = 0;
+    const totalSnapshots = leagues.length * marketTypes.length;
+    
     for (const league of leagues) {
       for (const marketType of marketTypes) {
         try {
           await this.fetchAndStoreSnapshot(league, marketType);
+          successCount++;
         } catch (error) {
+          failCount++;
           this.logger.warn(`Failed to fetch ${league}/${marketType}: ${error.message}`);
         }
       }
     }
 
-    this.logger.log('✅ Bootstrap complete');
+    this.logger.log(`✅ Bootstrap complete: ${successCount}/${totalSnapshots} snapshots loaded successfully`);
+    
+    if (failCount > 0) {
+      this.logger.warn(`⚠️  ${failCount} snapshots failed to load - some events may be missing`);
+    }
   }
 
   private async syncBetTypes(): Promise<void> {
@@ -240,12 +254,15 @@ export class UnabatedService implements OnModuleInit {
     // Subscribe to all leagues
     const leagues = this.restSnapshot.getAvailableLeagues();
 
-    // Start subscription in background (don't await)
-    this.realtime.subscribe(leagues).catch((error) => {
+    // Wait for subscription to establish before returning
+    // This ensures we don't start receiving updates before bootstrap completes
+    try {
+      await this.realtime.subscribe(leagues);
+      this.logger.log('✅ Real-time WebSocket connected and subscribed');
+    } catch (error) {
       this.logger.error(`Real-time subscription error: ${error.message}`);
-    });
-
-    this.logger.log('✅ Real-time subscriptions started');
+      throw error;
+    }
   }
 
   private async handleMarketLineUpdate(update: MarketLineUpdate): Promise<void> {
@@ -258,37 +275,37 @@ export class UnabatedService implements OnModuleInit {
         return;
       }
 
-      // Check if event exists, create placeholder if it doesn't
-      let event = await this.prisma.event.findUnique({
+      // Check if UnabatedEvent exists, create placeholder if it doesn't
+      let event = await this.prisma.unabatedEvent.findUnique({
         where: { id: eventId },
         select: { id: true },
       });
 
       if (!event) {
-        // Create a placeholder event for the market line
+        // Create a placeholder UnabatedEvent for the market line
         // This will be enriched later during periodic sync
         try {
-          event = await this.prisma.event.create({
+          // Extract league ID from marketLineKey if possible
+          const leagueId = update.marketLineKey?.split(':')[1] || 'unknown';
+          
+          event = await this.prisma.unabatedEvent.create({
             data: {
               id: eventId,
-              sportType: 'unknown', // Will be updated during next sync
-              league: 'unknown', // Will be updated during next sync
-              homeTeam: 'TBD',
-              awayTeam: 'TBD',
-              startTime: new Date(), // Placeholder
-              status: 'SCHEDULED',
+              leagueId: leagueId,
+              startTime: new Date(), // Placeholder, will be updated during sync
+              status: 'scheduled',
             },
             select: { id: true },
           });
-          this.logger.debug(`Created placeholder event ${eventId} from market line update`);
+          this.logger.debug(`Created placeholder UnabatedEvent ${eventId} from market line update`);
         } catch (error) {
           // Event might have been created by another concurrent update, try to fetch again
-          event = await this.prisma.event.findUnique({
+          event = await this.prisma.unabatedEvent.findUnique({
             where: { id: eventId },
             select: { id: true },
           });
           if (!event) {
-            this.logger.warn(`Failed to create or find event ${eventId}, skipping market line`);
+            this.logger.warn(`Failed to create or find UnabatedEvent ${eventId}, skipping market line`);
             return;
           }
         }
