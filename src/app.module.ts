@@ -97,14 +97,29 @@ export class RootController {
 
     // BullMQ job queues
     BullModule.forRoot({
-      connection: process.env.REDIS_URL 
-        ? process.env.REDIS_URL
-        : {
-            host: process.env.REDIS_HOST || 'localhost',
-            port: parseInt(process.env.REDIS_PORT || '6379', 10),
-            password: process.env.REDIS_PASSWORD || undefined,
-            db: parseInt(process.env.REDIS_DB || '0', 10),
-          },
+      connection: (() => {
+        // Parse REDIS_URL if provided
+        if (process.env.REDIS_URL) {
+          try {
+            const url = new URL(process.env.REDIS_URL);
+            return {
+              host: url.hostname,
+              port: parseInt(url.port) || 6379,
+              password: url.password || undefined,
+              db: parseInt(url.pathname.slice(1)) || 0,
+            };
+          } catch {
+            // Fall through to individual variables
+          }
+        }
+        // Fall back to individual variables
+        return {
+          host: process.env.REDIS_HOST || 'localhost',
+          port: parseInt(process.env.REDIS_PORT || '6379', 10),
+          password: process.env.REDIS_PASSWORD || undefined,
+          db: parseInt(process.env.REDIS_DB || '0', 10),
+        };
+      })(),
     }),
 
     // Core infrastructure
