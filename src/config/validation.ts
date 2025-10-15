@@ -36,6 +36,7 @@ export const validationSchema = Joi.object({
     ? Joi.string().default('test-unabated-key')
     : Joi.string().required(),
   UNABATED_BASE_URL: Joi.string().default('https://api.unabated.com/v1'),
+  UNABATED_LEAGUES: Joi.string().default('NFL,NBA,MLB,NHL,NCAAF,NCAAB'),
   THE_ODDS_API_KEY: isTestEnvironment
     ? Joi.string().default('test-the-odds-api-key')
     : Joi.string().required(),
@@ -74,6 +75,7 @@ export const validationSchema = Joi.object({
   FEATURE_ODDS_AGGREGATION: Joi.boolean().default(true),
   FEATURE_PUSH_NOTIFICATIONS: Joi.boolean().default(true),
   FEATURE_ANALYTICS_QUEUE: Joi.boolean().default(true),
+  UNABATED_BOOTSTRAP_ON_STARTUP: Joi.boolean().default(false),
 
   // Security
   IDEMPOTENCY_KEY_TTL_HOURS: Joi.number().default(24),

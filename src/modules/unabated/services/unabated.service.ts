@@ -39,12 +39,25 @@ export class UnabatedService implements OnModuleInit {
     this.logger.log('🚀 Initializing Unabated integration...');
 
     try {
-      // Bootstrap on startup
-      await this.bootstrap();
+      const bootstrapOnStartup = this.configService.get<boolean>(
+        'UNABATED_BOOTSTRAP_ON_STARTUP',
+        false,
+      );
 
-      // Small delay to ensure database writes have settled
-      this.logger.log('⏳ Waiting 2 seconds before starting real-time feed...');
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      if (bootstrapOnStartup) {
+        this.logger.log('📦 Bootstrap enabled - fetching initial data...');
+        // Bootstrap on startup
+        await this.bootstrap();
+
+        // Small delay to ensure database writes have settled
+        this.logger.log('⏳ Waiting 2 seconds before starting real-time feed...');
+        await new Promise(resolve => setTimeout(resolve, 2000));
+      } else {
+        this.logger.log('⏭️ Bootstrap disabled on startup');
+        this.logger.log('💡 Use POST /api/v1/unabated/sync to manually sync data');
+        // Still sync bet types as they're lightweight and needed for real-time
+        await this.syncBetTypes();
+      }
 
       // Start real-time subscriptions
       await this.startRealtime();
@@ -83,10 +96,14 @@ export class UnabatedService implements OnModuleInit {
       stats.betTypes = betTypes.length;
 
       // 2. Sync market sources and events for each league
-      const leaguesToSync = leagues || this.restSnapshot.getAvailableLeagues();
+      const leaguesToSync = leagues || this.configService
+        .get<string>('UNABATED_LEAGUES', 'NFL')
+        .split(',')
+        .map((l) => l.trim());
       const marketTypes = this.configService
-        .get<string>('UNABATED_MARKET_TYPES', 'straight,props')
-        .split(',');
+        .get<string>('UNABATED_MARKET_TYPES', 'straight')
+        .split(',')
+        .map((m) => m.trim());
       
       for (const league of leaguesToSync) {
         for (const marketType of marketTypes) {
@@ -124,19 +141,26 @@ export class UnabatedService implements OnModuleInit {
     // 1. Sync bet types
     await this.syncBetTypes();
 
-    // 2. Sync market sources
-    const leagues = this.restSnapshot.getAvailableLeagues();
+    // 2. Get configured leagues and market types
+    const leagues = this.configService
+      .get<string>('UNABATED_LEAGUES', 'NFL')
+      .split(',')
+      .map((l) => l.trim());
     const marketTypes = this.configService
-      .get<string>('UNABATED_MARKET_TYPES', 'straight,props')
-      .split(',');
+      .get<string>('UNABATED_MARKET_TYPES', 'straight')
+      .split(',')
+      .map((m) => m.trim());
 
+    this.logger.log(`🎯 Bootstrapping: ${leagues.join(', ')} - ${marketTypes.join(', ')}`);
+
+    // 3. Sync market sources
     for (const league of leagues) {
       for (const marketType of marketTypes) {
         await this.syncMarketSources(league, marketType);
       }
     }
 
-    // 3. Fetch initial snapshots
+    // 4. Fetch initial snapshots
     let successCount = 0;
     let failCount = 0;
     const totalSnapshots = leagues.length * marketTypes.length;
@@ -200,34 +224,52 @@ export class UnabatedService implements OnModuleInit {
     const snapshot = await this.restSnapshot.fetchSnapshot(league, marketType);
     const snapshotData = snapshot.data;
 
-    // Extract and store teams
+    // Extract and store teams in batches
     const teams = this.normalizer.extractTeamsFromSnapshot(snapshotData, league);
-    for (const team of teams) {
-      await this.prisma.team.upsert({
-        where: { id: team.id },
-        update: team,
-        create: team,
-      });
+    const TEAM_BATCH = 50;
+    for (let i = 0; i < teams.length; i += TEAM_BATCH) {
+      const batch = teams.slice(i, i + TEAM_BATCH);
+      await Promise.all(
+        batch.map((team) =>
+          this.prisma.team.upsert({
+            where: { id: team.id },
+            update: team,
+            create: team,
+          }),
+        ),
+      );
     }
 
-    // Extract and store players (for props markets)
+    // Extract and store players in batches (for props markets)
     const players = this.normalizer.extractPlayersFromSnapshot(snapshotData, league);
-    for (const player of players) {
-      await this.prisma.player.upsert({
-        where: { id: player.id },
-        update: player,
-        create: player,
-      });
+    const PLAYER_BATCH = 50;
+    for (let i = 0; i < players.length; i += PLAYER_BATCH) {
+      const batch = players.slice(i, i + PLAYER_BATCH);
+      await Promise.all(
+        batch.map((player) =>
+          this.prisma.player.upsert({
+            where: { id: player.id },
+            update: player,
+            create: player,
+          }),
+        ),
+      );
     }
 
-    // Extract and store events
+    // Extract and store events in batches
     const events = this.normalizer.extractEventsFromSnapshot(snapshotData, league);
-    for (const event of events) {
-      await this.prisma.unabatedEvent.upsert({
-        where: { id: event.id },
-        update: event,
-        create: event,
-      });
+    const EVENT_BATCH = 50;
+    for (let i = 0; i < events.length; i += EVENT_BATCH) {
+      const batch = events.slice(i, i + EVENT_BATCH);
+      await Promise.all(
+        batch.map((event) =>
+          this.prisma.unabatedEvent.upsert({
+            where: { id: event.id },
+            update: event,
+            create: event,
+          }),
+        ),
+      );
     }
 
     // For futures markets, ensure a placeholder event with ID '0' exists
@@ -253,11 +295,13 @@ export class UnabatedService implements OnModuleInit {
       });
     }
 
-    // Extract and store market lines
+    // Extract and store market lines in smaller batches to reduce memory pressure
     const lines = this.normalizer.extractMarketLinesFromSnapshot(snapshotData, league, marketType);
 
-    // Batch upsert in chunks
-    const BATCH_SIZE = 100;
+    // Reduced batch size for better memory management
+    const BATCH_SIZE = 50;
+    this.logger.log(`Processing ${lines.length} market lines in batches of ${BATCH_SIZE}...`);
+    
     for (let i = 0; i < lines.length; i += BATCH_SIZE) {
       const batch = lines.slice(i, i + BATCH_SIZE);
       await Promise.all(
@@ -269,6 +313,11 @@ export class UnabatedService implements OnModuleInit {
           }),
         ),
       );
+      
+      // Log progress for large datasets
+      if (lines.length > 1000 && (i + BATCH_SIZE) % 500 === 0) {
+        this.logger.debug(`Processed ${i + BATCH_SIZE}/${lines.length} lines`);
+      }
     }
 
     this.logger.log(
@@ -284,8 +333,13 @@ export class UnabatedService implements OnModuleInit {
       await this.handleMarketLineUpdate(line);
     });
 
-    // Subscribe to all leagues
-    const leagues = this.restSnapshot.getAvailableLeagues();
+    // Subscribe to configured leagues
+    const leagues = this.configService
+      .get<string>('UNABATED_LEAGUES', 'NFL')
+      .split(',')
+      .map((l) => l.trim());
+
+    this.logger.log(`📡 Subscribing to real-time updates for: ${leagues.join(', ')}`);
 
     // Wait for subscription to establish before returning
     // This ensures we don't start receiving updates before bootstrap completes
