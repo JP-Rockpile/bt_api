@@ -210,6 +210,16 @@ export class UnabatedService implements OnModuleInit {
       });
     }
 
+    // Extract and store players (for props markets)
+    const players = this.normalizer.extractPlayersFromSnapshot(snapshotData, league);
+    for (const player of players) {
+      await this.prisma.player.upsert({
+        where: { id: player.id },
+        update: player,
+        create: player,
+      });
+    }
+
     // Extract and store events
     const events = this.normalizer.extractEventsFromSnapshot(snapshotData, league);
     for (const event of events) {
@@ -217,6 +227,29 @@ export class UnabatedService implements OnModuleInit {
         where: { id: event.id },
         update: event,
         create: event,
+      });
+    }
+
+    // For futures markets, ensure a placeholder event with ID '0' exists
+    if (marketType.toLowerCase() === 'futures') {
+      await this.prisma.unabatedEvent.upsert({
+        where: { id: '0' },
+        update: {
+          leagueId: league.toUpperCase(),
+          status: 'scheduled',
+        },
+        create: {
+          id: '0',
+          leagueId: league.toUpperCase(),
+          startTime: null,
+          homeTeamId: null,
+          awayTeamId: null,
+          status: 'scheduled',
+          eventMetadata: {
+            eventName: 'Futures Market',
+            isFutures: true,
+          },
+        },
       });
     }
 
@@ -239,7 +272,7 @@ export class UnabatedService implements OnModuleInit {
     }
 
     this.logger.log(
-      `✅ Stored: ${events.length} events, ${lines.length} lines for ${league}/${marketType}`,
+      `✅ Stored: ${teams.length} teams, ${players.length} players, ${events.length} events, ${lines.length} lines for ${league}/${marketType}`,
     );
   }
 

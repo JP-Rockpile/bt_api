@@ -69,6 +69,9 @@ export class DataNormalizerService {
           const eventId = String(event.eventId);
           if (!eventId || seenEventIds.has(eventId)) continue;
 
+          // Skip eventId=0 (futures don't have real events)
+          if (eventId === '0') continue;
+
           const startTime = event.eventStart ? new Date(event.eventStart) : null;
 
           const eventTeams = event.eventTeams || {};
@@ -119,6 +122,8 @@ export class DataNormalizerService {
   extractMarketLinesFromSnapshot(snapshotData: any, leagueId: string, marketType: string): any[] {
     const lines = [];
     const periodTypes = snapshotData.periodTypes || {};
+    const isPropMarket = marketType.toLowerCase() === 'props';
+    const isFuturesMarket = marketType.toLowerCase() === 'futures';
 
     for (const [periodTypeName, periodData] of Object.entries(periodTypes)) {
       if (typeof periodData !== 'object' || !periodData) continue;
@@ -132,6 +137,7 @@ export class DataNormalizerService {
 
           const eventId = String(event.eventId);
           const betTypeId = event.betTypeId;
+          const betSubType = event.betSubType || null;
           const sides = event.sides || {};
 
           for (const sideData of Object.values(sides)) {
@@ -139,9 +145,33 @@ export class DataNormalizerService {
             const side = sideData as any;
 
             const sideIndex = side.sideIndex;
+            const personId = side.personId ? String(side.personId) : null;
+            const teamId = side.teamId ? String(side.teamId) : null;
+            const sideName = side.sideName || null;
+
+            // Determine outcome based on market type
             let outcome = 'unknown';
-            if (sideIndex === 1) outcome = 'home';
-            else if (sideIndex === 0) outcome = 'away';
+            if (isFuturesMarket) {
+              // Futures: use sideName if available, otherwise use team/player info
+              if (sideName) {
+                outcome = sideName;
+              } else if (teamId) {
+                // For team futures with over/under (like season wins)
+                if (sideIndex === 1) outcome = 'over';
+                else if (sideIndex === 0) outcome = 'under';
+              } else if (personId) {
+                // For player futures (like MVP), outcome is just the selection
+                outcome = 'win';
+              }
+            } else if (isPropMarket || personId) {
+              // Props: sideIndex 1 = over/yes, sideIndex 0 = under/no
+              if (sideIndex === 1) outcome = 'over';
+              else if (sideIndex === 0) outcome = 'under';
+            } else {
+              // Straight markets: sideIndex 1 = home, sideIndex 0 = away
+              if (sideIndex === 1) outcome = 'home';
+              else if (sideIndex === 0) outcome = 'away';
+            }
 
             const marketSourceLines = side.marketSourceLines || {};
 
@@ -172,9 +202,10 @@ export class DataNormalizerService {
                 point,
                 price,
                 decimalOdds,
-                isProp: marketType.toLowerCase() === 'props',
-                playerId: null,
+                isProp: isPropMarket,
+                playerId: personId,
                 betTypeId: betTypeId || null,
+                betSubType: betSubType ? String(betSubType) : null,
                 updatedAt,
               });
             }
@@ -224,5 +255,53 @@ export class DataNormalizerService {
 
     this.logger.debug(`Extracted ${teams.size} teams`);
     return Array.from(teams.values());
+  }
+
+  extractPlayersFromSnapshot(snapshotData: any, leagueId: string): any[] {
+    const players = new Map<string, any>();
+    const periodTypes = snapshotData.periodTypes || {};
+
+    for (const periodData of Object.values(periodTypes)) {
+      if (typeof periodData !== 'object' || !periodData) continue;
+
+      for (const timing of ['pregame', 'live']) {
+        const timingData = (periodData as any)[timing] || {};
+
+        for (const eventData of Object.values(timingData)) {
+          if (typeof eventData !== 'object' || !eventData) continue;
+          const event = eventData as any;
+
+          const playerPosition = event.playerPosition || null;
+          const sides = event.sides || {};
+
+          // Extract team information for player association
+          const eventTeams = event.eventTeams || {};
+          const teamIds = Object.values(eventTeams).map((t: any) => String(t.teamId));
+
+          for (const sideData of Object.values(sides)) {
+            if (typeof sideData !== 'object' || !sideData) continue;
+            const side = sideData as any;
+
+            const personId = side.personId;
+            if (personId && !players.has(String(personId))) {
+              // Try to determine which team the player belongs to
+              // In props, both sides reference the same player, so we use the first team
+              const teamId = teamIds.length > 0 ? teamIds[0] : null;
+
+              players.set(String(personId), {
+                id: String(personId),
+                name: `Player ${personId}`, // Name not provided in odds API
+                teamId,
+                leagueId: leagueId.toUpperCase(),
+                position: playerPosition,
+              });
+            }
+          }
+        }
+      }
+    }
+
+    this.logger.debug(`Extracted ${players.size} players`);
+    return Array.from(players.values());
   }
 }
