@@ -1,12 +1,20 @@
 #!/bin/sh
-export DATABASE_URL='postgresql://bt_app_postgres_user:CwTxsiSGCnJtyA66sPKMNfpQSAvGFhHQ@dpg-d3nca46r433s73bf6plg-a-internal.render.com:5432/bt_app_postgres?sslmode=require&schema=public'
 set -e
+
+# Don't override DATABASE_URL - use Render's environment variable!
+echo "🔍 Using DATABASE_URL from environment"
+echo "📊 Database connection info:"
+echo "   Host: $(echo "$DATABASE_URL" | sed -n 's/.*@\([^:/]*\).*/\1/p')"
+
+# Initial delay to let database come up fully
+echo "⏳ Waiting 10 seconds for database to be ready..."
+sleep 10
 
 echo "🔄 Running database migrations..."
 
 # Retry migrate deploy to handle DB DNS/startup delays in Render
-MAX_RETRIES=12
-SLEEP_SECONDS=5
+MAX_RETRIES=20
+SLEEP_SECONDS=10
 COUNT=0
 until npx prisma migrate deploy; do
   COUNT=$((COUNT+1))
