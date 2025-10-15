@@ -180,33 +180,9 @@ export class UnabatedService implements OnModuleInit {
   private async handleMarketLineUpdate(update: MarketLineUpdate): Promise<void> {
     const marketLineId = String(update.marketLineId); // Convert to string for Prisma
 
-    // Get existing line for history tracking
-    const existing = await this.prisma.marketLine.findUnique({
-      where: { id: marketLineId },
-    });
-
     const newPrice = update.price;
     const newPoint = update.points;
     const updatedAt = update.modifiedOn ? new Date(update.modifiedOn) : new Date();
-
-    // Track history if price or point changed
-    if (existing) {
-      const priceChanged = newPrice != null && existing.price !== newPrice;
-      const pointChanged = newPoint != null && existing.point !== newPoint;
-
-      if (priceChanged || pointChanged) {
-        await this.prisma.lineHistory.create({
-          data: {
-            marketLineId,
-            priceBefore: existing.price,
-            priceAfter: newPrice,
-            pointBefore: existing.point,
-            pointAfter: newPoint,
-            changedAt: new Date(),
-          },
-        });
-      }
-    }
 
     // Calculate decimal odds if needed
     let decimalOdds = update.sourceFormat === 2 ? update.sourcePrice : null;
