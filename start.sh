@@ -7,6 +7,10 @@ echo "🔍 Using DATABASE_URL from environment"
 # Parse database connection details
 DB_HOST=$(echo "$DATABASE_URL" | sed -n 's/.*@\([^:/]*\).*/\1/p')
 DB_PORT=$(echo "$DATABASE_URL" | sed -n 's/.*:\([0-9]*\)\/.*/\1/p')
+# If port is empty, it's using default PostgreSQL port
+if [ -z "$DB_PORT" ]; then
+  DB_PORT="5432"
+fi
 DB_NAME=$(echo "$DATABASE_URL" | sed -n 's/.*\/\([^?]*\).*/\1/p')
 
 echo "📊 Database connection details:"

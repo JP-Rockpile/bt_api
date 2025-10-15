@@ -35,8 +35,8 @@ RUN npx prisma generate
 # Build application
 RUN npm run build
 
-# Remove dev dependencies
-RUN npm prune --production
+# Remove dev dependencies (using modern flag)
+RUN npm prune --omit=dev
 
 # Stage 2: Production
 FROM node:20-slim
