@@ -9,15 +9,20 @@ import { TransformInterceptor } from './common/interceptors/transform.intercepto
 import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
 
 async function bootstrap() {
-  // Initialize OpenTelemetry tracing before app creation
-  const otelEnabled = process.env.OTEL_ENABLED === 'true';
-  if (otelEnabled) {
-    initTracing();
-  }
+  try {
+    console.log('🔧 Bootstrap starting...');
+    
+    // Initialize OpenTelemetry tracing before app creation
+    const otelEnabled = process.env.OTEL_ENABLED === 'true';
+    if (otelEnabled) {
+      initTracing();
+    }
 
-  const app = await NestFactory.create(AppModule, {
-    bufferLogs: true,
-  });
+    console.log('📦 Creating NestJS application...');
+    const app = await NestFactory.create(AppModule, {
+      bufferLogs: true,
+    });
+    console.log('✅ NestJS application created');
 
   // Use Pino logger
   app.useLogger(app.get(Logger));
@@ -94,29 +99,41 @@ async function bootstrap() {
     .addTag('health', 'Health checks and monitoring')
     .build();
 
-  const document = SwaggerModule.createDocument(app, config);
-  SwaggerModule.setup(`${apiPrefix}/docs`, app, document, {
-    swaggerOptions: {
-      persistAuthorization: true,
-    },
-  });
+    console.log('📖 Setting up Swagger documentation...');
+    const document = SwaggerModule.createDocument(app, config);
+    SwaggerModule.setup(`${apiPrefix}/docs`, app, document, {
+      swaggerOptions: {
+        persistAuthorization: true,
+      },
+    });
 
-  // Expose OpenAPI JSON
-  app.getHttpAdapter().get(`/${apiPrefix}/docs-json`, (req, res) => {
-    res.json(document);
-  });
+    // Expose OpenAPI JSON
+    app.getHttpAdapter().get(`/${apiPrefix}/docs-json`, (req, res) => {
+      res.json(document);
+    });
+    console.log('✅ Swagger documentation ready');
 
-  // Graceful shutdown
-  app.enableShutdownHooks();
+    // Graceful shutdown
+    app.enableShutdownHooks();
 
-  const port = process.env.PORT || 3000;
-  const host = process.env.HOST || '0.0.0.0'; // Bind to all interfaces for production
-  await app.listen(port, host);
+    const port = process.env.PORT || 3000;
+    const host = process.env.HOST || '0.0.0.0'; // Bind to all interfaces for production
+    
+    console.log(`🌐 Attempting to listen on ${host}:${port}...`);
+    await app.listen(port, host);
 
-  const logger = app.get(Logger);
-  logger.log(`🚀 Application is running on: http://${host}:${port}/${apiPrefix}`);
-  logger.log(`📚 API Documentation: http://${host}:${port}/${apiPrefix}/docs`);
-  logger.log(`🔍 OpenTelemetry: ${otelEnabled ? 'Enabled' : 'Disabled'}`);
+    const logger = app.get(Logger);
+    logger.log(`🚀 Application is running on: http://${host}:${port}/${apiPrefix}`);
+    logger.log(`📚 API Documentation: http://${host}:${port}/${apiPrefix}/docs`);
+    logger.log(`🔍 OpenTelemetry: ${otelEnabled ? 'Enabled' : 'Disabled'}`);
+  } catch (error) {
+    console.error('❌ Fatal error during bootstrap:', error);
+    console.error('Stack trace:', error.stack);
+    process.exit(1);
+  }
 }
 
-bootstrap();
+bootstrap().catch((error) => {
+  console.error('❌ Unhandled error in bootstrap:', error);
+  process.exit(1);
+});
