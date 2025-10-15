@@ -74,24 +74,29 @@ export class UnabatedService implements OnModuleInit {
 
     try {
       // 1. Sync bet types
+      await this.syncBetTypes();
       const betTypes = await this.restSnapshot.fetchBetTypes();
       stats.betTypes = betTypes.length;
-      await this.storeBetTypes(betTypes);
 
-      // 2. Sync market sources
-      const sources = await this.restSnapshot.fetchMarketSources();
-      stats.sources = sources.length;
-      await this.storeMarketSources(sources);
-
-      // 3. Sync events and lines for each league
+      // 2. Sync market sources and events for each league
       const leaguesToSync = leagues || this.restSnapshot.getAvailableLeagues();
+      const marketTypes = this.configService
+        .get<string>('UNABATED_MARKET_TYPES', 'straight,props')
+        .split(',');
       
       for (const league of leaguesToSync) {
-        const marketTypes = this.restSnapshot.getMarketTypesForLeague(league);
-        
         for (const marketType of marketTypes) {
-          const snapshot = await this.restSnapshot.fetchMarketSnapshot(league, marketType);
-          const { events, lines } = this.marketParser.parseSnapshot(snapshot, league);
+          // Sync market sources
+          const sources = await this.restSnapshot.fetchMarketSources(league, marketType);
+          stats.sources += sources.length;
+          await this.storeMarketSources(sources);
+
+          // Fetch and store snapshot (events and lines)
+          const snapshot = await this.restSnapshot.fetchSnapshot(league, marketType);
+          const snapshotData = snapshot.data;
+          
+          const events = this.normalizer.extractEventsFromSnapshot(snapshotData, league);
+          const lines = this.normalizer.extractMarketLinesFromSnapshot(snapshotData, league, marketType);
           
           await this.storeEvents(events);
           await this.storeMarketLines(lines);
@@ -101,7 +106,7 @@ export class UnabatedService implements OnModuleInit {
         }
       }
 
-      this.logger.log(`✅ Sync complete: ${stats.events} events, ${stats.lines} lines`);
+      this.logger.log(`✅ Sync complete: ${stats.betTypes} types, ${stats.sources} sources, ${stats.events} events, ${stats.lines} lines`);
       return stats;
     } catch (error) {
       this.logger.error(`Sync failed: ${error.message}`);
@@ -150,8 +155,8 @@ export class UnabatedService implements OnModuleInit {
     for (const betType of normalized) {
       await this.prisma.betType.upsert({
         where: { id: betType.id },
-        update: betType,
-        create: betType,
+        update: betType as any, // Type assertion needed until Prisma client regenerates from migrated DB
+        create: betType as any,
       });
     }
 
@@ -270,8 +275,8 @@ export class UnabatedService implements OnModuleInit {
               league: 'unknown', // Will be updated during next sync
               homeTeam: 'TBD',
               awayTeam: 'TBD',
-              scheduledTime: new Date(), // Placeholder
-              status: 'scheduled',
+              startTime: new Date(), // Placeholder
+              status: 'SCHEDULED',
             },
             select: { id: true },
           });
@@ -323,6 +328,54 @@ export class UnabatedService implements OnModuleInit {
     } catch (error) {
       // Don't let market line errors crash the app
       this.logger.error(`Error in market line handler: ${error.message}`);
+    }
+  }
+
+  private async storeBetTypes(betTypes: any[]): Promise<void> {
+    const normalized = betTypes.map((bt) => this.normalizer.normalizeBetType(bt));
+    for (const betType of normalized) {
+      await this.prisma.betType.upsert({
+        where: { id: betType.id },
+        update: betType as any, // Type assertion needed until Prisma client regenerates from migrated DB
+        create: betType as any,
+      });
+    }
+  }
+
+  private async storeMarketSources(sources: any[]): Promise<void> {
+    const normalized = sources.map((s) => this.normalizer.normalizeMarketSource(s));
+    for (const source of normalized) {
+      await this.prisma.marketSource.upsert({
+        where: { id: source.id },
+        update: source,
+        create: source,
+      });
+    }
+  }
+
+  private async storeEvents(events: any[]): Promise<void> {
+    for (const event of events) {
+      await this.prisma.unabatedEvent.upsert({
+        where: { id: event.id },
+        update: event,
+        create: event,
+      });
+    }
+  }
+
+  private async storeMarketLines(lines: any[]): Promise<void> {
+    const BATCH_SIZE = 100;
+    for (let i = 0; i < lines.length; i += BATCH_SIZE) {
+      const batch = lines.slice(i, i + BATCH_SIZE);
+      await Promise.all(
+        batch.map((line) =>
+          this.prisma.marketLine.upsert({
+            where: { id: line.id },
+            update: line,
+            create: line,
+          }),
+        ),
+      );
     }
   }
 }
