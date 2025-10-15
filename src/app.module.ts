@@ -106,6 +106,7 @@ export class RootController {
             return {
               host: url.hostname,
               port: parseInt(url.port) || 6379,
+              username: url.username || undefined,
               password: url.password || undefined,
               db: parseInt(url.pathname.slice(1)) || 0,
               // Add TLS config for rediss:// URLs
