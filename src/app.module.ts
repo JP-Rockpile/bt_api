@@ -12,6 +12,7 @@ import { validationSchema } from './config/validation';
 // Core modules
 import { DatabaseModule } from './common/database/database.module';
 import { RedisModule } from './common/redis/redis.module';
+import { RedisService } from './common/redis/redis.service';
 import { AuthModule } from './common/auth/auth.module';
 
 // Feature modules
@@ -95,35 +96,13 @@ export class RootController {
       },
     ]),
 
-    // BullMQ job queues
-    BullModule.forRoot({
-      connection: (() => {
-        // Parse REDIS_URL if provided
-        if (process.env.REDIS_URL) {
-          try {
-            const url = new URL(process.env.REDIS_URL);
-            const isSSL = url.protocol === 'rediss:';
-            return {
-              host: url.hostname,
-              port: parseInt(url.port) || 6379,
-              username: url.username || undefined,
-              password: url.password || undefined,
-              db: parseInt(url.pathname.slice(1)) || 0,
-              // Add TLS config for rediss:// URLs
-              ...(isSSL ? { tls: {} } : {}),
-            };
-          } catch {
-            // Fall through to individual variables
-          }
-        }
-        // Fall back to individual variables
-        return {
-          host: process.env.REDIS_HOST || 'localhost',
-          port: parseInt(process.env.REDIS_PORT || '6379', 10),
-          password: process.env.REDIS_PASSWORD || undefined,
-          db: parseInt(process.env.REDIS_DB || '0', 10),
-        };
-      })(),
+    // BullMQ job queues - reuse the shared Redis client to avoid connection storms
+    BullModule.forRootAsync({
+      imports: [RedisModule],
+      inject: [RedisService],
+      useFactory: (redisService: RedisService) => ({
+        connection: redisService.getClient(),
+      }),
     }),
 
     // Core infrastructure
