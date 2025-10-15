@@ -10,18 +10,24 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
   constructor(private configService: ConfigService) {
     const redisConfig = this.configService.get('redis');
 
-    this.client = new Redis({
-      host: redisConfig.host,
-      port: redisConfig.port,
-      password: redisConfig.password,
-      db: redisConfig.db,
+    // Use REDIS_URL if provided, otherwise fall back to individual config
+    const connectionConfig = redisConfig.url && redisConfig.url !== 'redis://localhost:6379'
+      ? redisConfig.url
+      : {
+          host: redisConfig.host,
+          port: redisConfig.port,
+          password: redisConfig.password,
+          db: redisConfig.db,
+          ...(redisConfig.tls ? { tls: {} } : {}),
+        };
+
+    this.client = new Redis(connectionConfig, {
       retryStrategy: (times: number) => {
         const delay = Math.min(times * 50, 2000);
         return delay;
       },
       maxRetriesPerRequest: 3,
       enableReadyCheck: true,
-      ...(redisConfig.tls ? { tls: {} } : {}),
     });
 
     this.client.on('error', (error) => {
