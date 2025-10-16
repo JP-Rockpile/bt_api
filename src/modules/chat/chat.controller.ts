@@ -19,6 +19,8 @@ import { CurrentUser } from '../../common/auth/decorators/current-user.decorator
 import { SseHeadersInterceptor } from '../../common/interceptors/sse-headers.interceptor';
 import { ChatService } from './chat.service';
 import { SseService } from './services/sse.service';
+import { BtModelProxyService } from './services/bt-model-proxy.service';
+import { BtModelClientService } from './services/bt-model-client.service';
 import { CreateConversationDto } from './dto';
 import { Observable } from 'rxjs';
 
@@ -32,6 +34,8 @@ export class ChatController {
   constructor(
     private chatService: ChatService,
     private sseService: SseService,
+    private btModelProxy: BtModelProxyService,
+    private btModelClient: BtModelClientService,
   ) {}
 
   @Post('conversations')
@@ -49,9 +53,9 @@ export class ChatController {
       createConversationDto.metadata,
     );
 
-    // If there was an initial message, send placeholder response via SSE
+    // If there was an initial message, stream AI response via SSE
     if (createConversationDto.initialMessage) {
-      this.sendPlaceholderResponse(userId, conversation.id, createConversationDto.initialMessage);
+      this.streamAIResponse(userId, conversation.id, createConversationDto.initialMessage);
     }
 
     return conversation;
@@ -92,83 +96,46 @@ export class ChatController {
     const saved = await this.chatService.createMessage(userId, conversationId, 'USER', content);
     this.logger.log(`✅ User message saved to database`);
 
-    // TODO: Remove this placeholder once bt_model is integrated
-    // For now, send a placeholder response via SSE to unblock the frontend
-    // This simulates what bt_model will do:
+    // Stream response from bt_model (or placeholder if bt_model is disabled)
+    // This will:
     // 1. Stream response chunks via SSE (llm_chunk events)
     // 2. Send completion signal (llm_complete event)
     // 3. Persist final response to database
-    this.logger.log(`🤖 Triggering placeholder response for user ${userId}`);
-    this.sendPlaceholderResponse(userId, conversationId, content);
+    this.logger.log(`🤖 Triggering AI response for user ${userId}`);
+    this.streamAIResponse(userId, conversationId, content);
 
     return saved;
   }
 
   /**
-   * TEMPORARY: Placeholder response until bt_model is integrated
-   * Simulates LLM streaming response via SSE
+   * Stream AI response from bt_model (or placeholder if bt_model is disabled)
+   * Handles both production (bt_model) and development (placeholder) scenarios
    */
-  private async sendPlaceholderResponse(
+  private async streamAIResponse(
     userId: string,
     conversationId: string,
     userMessage: string,
   ) {
     this.logger.log(
-      `🎬 sendPlaceholderResponse STARTED - User: ${userId}, Conv: ${conversationId}`,
+      `🎬 streamAIResponse STARTED - User: ${userId}, Conv: ${conversationId}`,
     );
 
     // Don't await - send response asynchronously via SSE
     setTimeout(async () => {
       try {
-        this.logger.log(`⏰ Placeholder response timeout triggered`);
-
-        const placeholderResponse = `I received your message: "${userMessage}". This is a placeholder response while bt_model integration is being completed.`;
-        this.logger.log(`📝 Placeholder message prepared: ${placeholderResponse.length} chars`);
-
-        // Simulate streaming by sending chunks
-        const words = placeholderResponse.split(' ');
-        this.logger.log(`📦 Splitting into ${words.length} word chunks`);
-
-        let _accumulatedResponse = '';
-        let chunkCount = 0;
-
-        for (const word of words) {
-          const chunk = word + ' ';
-          _accumulatedResponse += chunk;
-          chunkCount++;
-
-          // Send each word as a chunk via SSE
-          this.logger.debug(
-            `📤 Sending chunk ${chunkCount}/${words.length}: "${chunk.trim()}" to ${userId}:${conversationId}`,
-          );
-          this.sseService.sendLLMChunk(userId, conversationId, chunk);
-
-          // Small delay to simulate streaming (remove in production)
-          await new Promise((resolve) => setTimeout(resolve, 50));
+        // Check if bt_model is enabled
+        if (this.btModelClient.isEnabled()) {
+          this.logger.log(`🤖 Streaming response from bt_model`);
+          await this.btModelProxy.streamResponse(userId, conversationId, userMessage);
+        } else {
+          // Fallback to placeholder response for development
+          this.logger.log(`⚠️ bt_model disabled, using placeholder response`);
+          await this.sendPlaceholderResponse(userId, conversationId, userMessage);
         }
-
-        this.logger.log(`✅ All ${chunkCount} chunks sent`);
-
-        // Send completion signal
-        this.logger.log(`🏁 Sending llm_complete event`);
-        this.sseService.sendLLMComplete(userId, conversationId, placeholderResponse.trim(), {
-          model: 'placeholder',
-          tokensUsed: words.length,
-        });
-
-        // Persist the assistant response to database
-        this.logger.log(`💾 Persisting assistant response to database`);
-        await this.chatService.createMessage(
-          userId,
-          conversationId,
-          'ASSISTANT',
-          placeholderResponse.trim(),
-        );
-        this.logger.log(`✅ Placeholder response complete!`);
       } catch (error) {
         // Log error but don't fail the original request
-        this.logger.error('❌ Error sending placeholder response:', error);
-        console.error('Error sending placeholder response:', error);
+        this.logger.error('❌ Error streaming AI response:', error);
+        console.error('Error streaming AI response:', error);
 
         // Send error via SSE
         this.sseService.sendToStream(userId, conversationId, {
@@ -177,7 +144,56 @@ export class ChatController {
           timestamp: new Date().toISOString(),
         });
       }
-    }, 500); // Small delay to simulate processing
+    }, 500); // Small delay to ensure SSE connection is established
+  }
+
+  /**
+   * Placeholder response for development when bt_model is disabled
+   * Simulates LLM streaming response via SSE
+   */
+  private async sendPlaceholderResponse(
+    userId: string,
+    conversationId: string,
+    userMessage: string,
+  ) {
+    this.logger.log(`📝 Sending placeholder response`);
+
+    const placeholderResponse = `I received your message: "${userMessage}". This is a placeholder response. Enable bt_model by setting BT_MODEL_ENABLED=true in your .env file.`;
+
+    // Simulate streaming by sending chunks
+    const words = placeholderResponse.split(' ');
+    let chunkCount = 0;
+
+    for (const word of words) {
+      const chunk = word + ' ';
+      chunkCount++;
+
+      // Send each word as a chunk via SSE
+      this.logger.debug(
+        `📤 Sending chunk ${chunkCount}/${words.length}: "${chunk.trim()}" to ${userId}:${conversationId}`,
+      );
+      this.sseService.sendLLMChunk(userId, conversationId, chunk);
+
+      // Small delay to simulate streaming
+      await new Promise((resolve) => setTimeout(resolve, 50));
+    }
+
+    // Send completion signal
+    this.logger.log(`🏁 Sending llm_complete event`);
+    this.sseService.sendLLMComplete(userId, conversationId, placeholderResponse.trim(), {
+      model: 'placeholder',
+      tokensUsed: words.length,
+    });
+
+    // Persist the assistant response to database
+    this.logger.log(`💾 Persisting assistant response to database`);
+    await this.chatService.createMessage(
+      userId,
+      conversationId,
+      'ASSISTANT',
+      placeholderResponse.trim(),
+    );
+    this.logger.log(`✅ Placeholder response complete!`);
   }
 
   @Sse('conversations/:conversationId/stream')

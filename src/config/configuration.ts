@@ -81,6 +81,13 @@ export const configuration = () => ({
   security: {
     idempotencyKeyTtlHours: parseInt(process.env.IDEMPOTENCY_KEY_TTL_HOURS || '24', 10),
     jwtCacheTtl: parseInt(process.env.JWT_CACHE_TTL_SECONDS || '3600', 10),
+    btModelServiceToken: process.env.BT_MODEL_SERVICE_TOKEN,
+  },
+
+  btModel: {
+    baseUrl: process.env.BT_MODEL_BASE_URL || 'http://localhost:8000',
+    timeout: parseInt(process.env.BT_MODEL_TIMEOUT || '30000', 10),
+    enabled: process.env.BT_MODEL_ENABLED !== 'false',
   },
 });
 

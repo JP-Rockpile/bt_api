@@ -87,4 +87,9 @@ export const validationSchema = Joi.object({
     .description(
       'Service token for bt_model authentication (optional until bt_model integration is complete)',
     ),
+
+  // bt_model Integration
+  BT_MODEL_BASE_URL: Joi.string().uri().default('http://localhost:8000'),
+  BT_MODEL_TIMEOUT: Joi.number().default(30000),
+  BT_MODEL_ENABLED: Joi.boolean().default(false),
 });
