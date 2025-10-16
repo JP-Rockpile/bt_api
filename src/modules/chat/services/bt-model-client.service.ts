@@ -18,10 +18,11 @@ export class BtModelClientService {
     const btModelConfig = this.configService.get('btModel', { infer: true });
     const securityConfig = this.configService.get('security', { infer: true });
 
-    this.baseUrl = btModelConfig.baseUrl;
-    this.timeout = btModelConfig.timeout;
-    this.enabled = btModelConfig.enabled;
-    this.serviceToken = securityConfig.btModelServiceToken;
+    // Handle config with defaults
+    this.baseUrl = btModelConfig?.baseUrl || 'http://localhost:8000';
+    this.timeout = btModelConfig?.timeout || 30000;
+    this.enabled = btModelConfig?.enabled ?? false;
+    this.serviceToken = securityConfig?.btModelServiceToken || '';
 
     this.logger.log(`BtModelClient initialized: ${this.baseUrl} (enabled: ${this.enabled})`);
   }
